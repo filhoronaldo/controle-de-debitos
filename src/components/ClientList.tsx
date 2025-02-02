@@ -9,6 +9,7 @@ import { useState } from "react";
 import { format, parseISO } from "date-fns";
 import { toast } from "sonner";
 import { InvoiceDialog } from "./InvoiceDialog";
+import { ClientDetailsDialog } from "./ClientDetailsDialog";
 
 interface Client {
   id: string;
@@ -31,6 +32,7 @@ export function ClientList() {
   const [selectedClientName, setSelectedClientName] = useState<string>("");
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const queryClient = useQueryClient();
   
   const { data: clients, isLoading } = useQuery({
@@ -112,6 +114,12 @@ export function ClientList() {
     setIsInvoiceOpen(true);
   };
 
+  const handleViewDetails = (clientId: string, clientName: string) => {
+    setSelectedClient(clientId);
+    setSelectedClientName(clientName);
+    setIsDetailsOpen(true);
+  };
+
   const handleDeleteTransaction = (transactionId: string) => {
     if (window.confirm('Tem certeza que deseja excluir esta transação?')) {
       deleteTransaction.mutate(transactionId);
@@ -165,7 +173,11 @@ export function ClientList() {
                       <CreditCard className="h-4 w-4 mr-1" />
                       Faturas
                     </Button>
-                    <Button variant="outline" size="sm">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleViewDetails(client.id, client.name)}
+                    >
                       <User className="h-4 w-4 mr-1" />
                       Detalhes
                     </Button>
@@ -253,12 +265,20 @@ export function ClientList() {
       </Dialog>
 
       {selectedClient && (
-        <InvoiceDialog
-          clientId={selectedClient}
-          clientName={selectedClientName}
-          open={isInvoiceOpen}
-          onOpenChange={setIsInvoiceOpen}
-        />
+        <>
+          <InvoiceDialog
+            clientId={selectedClient}
+            clientName={selectedClientName}
+            open={isInvoiceOpen}
+            onOpenChange={setIsInvoiceOpen}
+          />
+          <ClientDetailsDialog
+            clientId={selectedClient}
+            clientName={selectedClientName}
+            open={isDetailsOpen}
+            onOpenChange={setIsDetailsOpen}
+          />
+        </>
       )}
     </>
   );
