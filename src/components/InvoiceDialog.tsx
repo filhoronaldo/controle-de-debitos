@@ -27,8 +27,8 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
         .from('debts')
         .select('*')
         .eq('client_id', clientId)
-        .gte('invoice_month', startDate.toISOString().split('T')[0])
-        .lte('invoice_month', endDate.toISOString().split('T')[0])
+        .filter('invoice_month', 'gte', startDate.toISOString().split('T')[0])
+        .filter('invoice_month', 'lte', endDate.toISOString().split('T')[0])
         .order('transaction_date', { ascending: true });
 
       if (error) throw error;
