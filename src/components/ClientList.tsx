@@ -37,32 +37,50 @@ export function ClientList() {
   const { data: clients, isLoading } = useQuery({
     queryKey: ['clients'],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // First, get clients with their debts
+      const { data: clientsData, error: clientsError } = await supabase
         .from('clients')
         .select(`
           id,
           name,
           debts (
             amount,
-            transaction_date
+            transaction_date,
+            id
           )
         `);
 
-      if (error) throw error;
+      if (clientsError) throw clientsError;
 
-      return data.map((client: any) => {
-        const totalDebt = client.debts.reduce((sum: number, debt: any) => sum + Number(debt.amount), 0);
-        const hasOverdueBills = client.debts.some((debt: any) => {
-          return debt.transaction_date && parseISO(debt.transaction_date) < new Date();
-        });
+      // Then, get all payments for each client's debts
+      const clientsWithPayments = await Promise.all(
+        clientsData.map(async (client: any) => {
+          const debtIds = client.debts.map((debt: any) => debt.id);
+          
+          const { data: payments, error: paymentsError } = await supabase
+            .from('payments')
+            .select('amount')
+            .in('debt_id', debtIds);
 
-        return {
-          id: client.id,
-          name: client.name,
-          total_debt: totalDebt,
-          is_overdue: hasOverdueBills
-        };
-      });
+          if (paymentsError) throw paymentsError;
+
+          const totalDebt = client.debts.reduce((sum: number, debt: any) => sum + Number(debt.amount), 0);
+          const totalPayments = payments?.reduce((sum: number, payment: any) => sum + Number(payment.amount), 0) || 0;
+          
+          const hasOverdueBills = client.debts.some((debt: any) => {
+            return debt.transaction_date && parseISO(debt.transaction_date) < new Date();
+          });
+
+          return {
+            id: client.id,
+            name: client.name,
+            total_debt: totalDebt - totalPayments,
+            is_overdue: hasOverdueBills
+          };
+        })
+      );
+
+      return clientsWithPayments;
     }
   });
 
