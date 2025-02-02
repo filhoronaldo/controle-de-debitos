@@ -47,9 +47,12 @@ export function CreateClientDialog() {
 
   const onSubmit = async (data: CreateClientForm) => {
     try {
+      // Remove all non-numeric characters from phone before saving
+      const phoneNumbers = data.phone.replace(/\D/g, '');
+      
       const { error } = await supabase.from("clients").insert({
         name: data.name,
-        phone: data.phone,
+        phone: phoneNumbers,
         is_whatsapp: data.is_whatsapp,
       });
       
