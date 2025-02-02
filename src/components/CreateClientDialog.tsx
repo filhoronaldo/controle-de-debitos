@@ -31,7 +31,11 @@ interface CreateClientForm {
 export function CreateClientDialog() {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
-  const form = useForm<CreateClientForm>();
+  const form = useForm<CreateClientForm>({
+    defaultValues: {
+      is_whatsapp: true
+    }
+  });
 
   const onSubmit = async (data: CreateClientForm) => {
     try {
