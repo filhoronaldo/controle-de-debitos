@@ -67,6 +67,7 @@ export function ClientDetailsDialog({ clientId, clientName, open, onOpenChange }
       });
 
       queryClient.invalidateQueries({ queryKey: ['client-details', clientId] });
+      queryClient.invalidateQueries({ queryKey: ['clients'] }); // Also update the clients list
       setIsEditingPhone(false);
     } catch (error) {
       toast({
@@ -87,12 +88,20 @@ export function ClientDetailsDialog({ clientId, clientName, open, onOpenChange }
 
       if (error) throw error;
 
+      // Update the cache immediately
+      queryClient.setQueryData(['client-details', clientId], (oldData: any) => ({
+        ...oldData,
+        is_whatsapp: newStatus,
+      }));
+
+      // Also invalidate the clients list query to update the main list
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+
       toast({
         title: `WhatsApp ${newStatus ? 'ativado' : 'desativado'}`,
         description: `O WhatsApp foi ${newStatus ? 'ativado' : 'desativado'} para este cliente.`,
       });
 
-      queryClient.invalidateQueries({ queryKey: ['client-details', clientId] });
       setShowWhatsAppDialog(false);
     } catch (error) {
       toast({
