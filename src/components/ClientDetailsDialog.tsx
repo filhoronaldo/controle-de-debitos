@@ -5,8 +5,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { toast } from "@/components/ui/use-toast";
-import { Phone, WhatsappIcon } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
+import { Phone, MessageSquare } from "lucide-react";
 
 interface ClientDetailsDialogProps {
   clientId: string;
@@ -165,7 +165,7 @@ export function ClientDetailsDialog({ clientId, clientName, open, onOpenChange }
                 onClick={() => startWhatsAppToggle(!client.is_whatsapp)}
                 className={client.is_whatsapp ? "text-green-500 hover:text-green-600" : "text-gray-400 hover:text-gray-500"}
               >
-                <WhatsappIcon className="h-5 w-5" />
+                <MessageSquare className="h-5 w-5" />
               </Button>
             </div>
           </div>
