@@ -197,14 +197,19 @@ export function ClientDetailsDialog({ clientId, clientName, open, onOpenChange }
                 }}>
                   Editar
                 </Button>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={handleWhatsAppToggle}
-                  className={client.is_whatsapp ? "text-green-500 hover:text-green-600" : "text-gray-400 hover:text-gray-500"}
-                >
-                  <MessageSquare className="h-5 w-5" />
-                </Button>
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={handleWhatsAppToggle}
+                    className={client.is_whatsapp ? "text-green-500 hover:text-green-600" : "text-gray-400 hover:text-gray-500"}
+                  >
+                    <MessageSquare className="h-5 w-5" />
+                  </Button>
+                  <span className={client.is_whatsapp ? "text-green-500" : "text-gray-400"}>
+                    WhatsApp
+                  </span>
+                </div>
               </div>
             )}
           </div>
