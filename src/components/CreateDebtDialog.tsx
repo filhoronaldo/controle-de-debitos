@@ -52,26 +52,28 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
   });
 
   const formatCurrency = (value: string) => {
-    // Remove tudo que não for número
+    // Remove qualquer caractere que não seja número
     const numbers = value.replace(/\D/g, "");
     
-    // Se não houver números, retorna R$ 0,00
-    if (numbers === "") return "R$ 0,00";
+    // Mantém os zeros à direita
+    const paddedNumbers = numbers.padStart(3, "0");
     
     // Converte para número e divide por 100 para ter os centavos
-    const amount = parseInt(numbers, 10) / 100;
+    const amount = parseInt(paddedNumbers, 10) / 100;
     
     // Formata o número como moeda
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
-      currency: 'BRL'
+      currency: 'BRL',
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
     }).format(amount);
   };
 
   const parseCurrencyToNumber = (value: string) => {
     // Remove todos os caracteres não numéricos
     const numbers = value.replace(/\D/g, "");
-    // Converte para número e divide por 100
+    // Mantém os zeros e divide por 100
     return numbers ? parseInt(numbers, 10) / 100 : 0;
   };
 
@@ -147,7 +149,8 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
                       placeholder="R$ 0,00"
                       {...field}
                       onChange={(e) => {
-                        const formatted = formatCurrency(e.target.value);
+                        const rawValue = e.target.value.replace(/[^\d]/g, '');
+                        const formatted = formatCurrency(rawValue);
                         e.target.value = formatted;
                         field.onChange(parseCurrencyToNumber(formatted));
                       }}
