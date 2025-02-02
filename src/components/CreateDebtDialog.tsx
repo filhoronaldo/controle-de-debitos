@@ -25,7 +25,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Textarea } from "@/components/ui/textarea";
 
 const debtFormSchema = z.object({
-  amount: z.coerce.number().min(0, "O valor deve ser maior que zero"),
+  amount: z.coerce.number().min(0.01, "O valor deve ser maior que zero"),
   description: z.string().optional(),
   transaction_date: z.string().optional(),
 });
@@ -49,6 +49,25 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
     },
   });
 
+  const formatCurrency = (value: string) => {
+    // Remove non-digit characters
+    let number = value.replace(/\D/g, "");
+    
+    // Convert to decimal (divide by 100 to handle cents)
+    const decimal = parseFloat(number) / 100;
+    
+    // Format as Brazilian Real
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(decimal);
+  };
+
+  const parseCurrencyToNumber = (value: string) => {
+    // Remove currency symbol, dots and convert comma to dot
+    return Number(value.replace(/[R$\s.]/g, '').replace(',', '.'));
+  };
+
   const onSubmit = async (data: DebtFormValues) => {
     try {
       const { error } = await supabase
@@ -65,7 +84,7 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
 
       toast({
         title: "Débito criado com sucesso!",
-        description: `Débito de R$ ${data.amount.toFixed(2)} adicionado para ${clientName}`,
+        description: `Débito de ${formatCurrency(data.amount.toString())} adicionado para ${clientName}`,
       });
 
       queryClient.invalidateQueries({ queryKey: ['clients'] });
@@ -102,11 +121,14 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
                   <FormLabel>Valor</FormLabel>
                   <FormControl>
                     <Input
-                      type="number"
-                      step="0.01"
-                      placeholder="0.00"
+                      placeholder="R$ 0,00"
                       {...field}
-                      onChange={(e) => field.onChange(Number(e.target.value))}
+                      onChange={(e) => {
+                        const formatted = formatCurrency(e.target.value);
+                        e.target.value = formatted;
+                        field.onChange(parseCurrencyToNumber(formatted));
+                      }}
+                      value={formatCurrency(field.value.toString())}
                     />
                   </FormControl>
                   <FormMessage />
