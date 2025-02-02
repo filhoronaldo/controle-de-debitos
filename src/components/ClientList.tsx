@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { useState } from "react";
 import { format, parseISO } from "date-fns";
 import { toast } from "sonner";
+import { InvoiceDialog } from "./InvoiceDialog";
 
 interface Client {
   id: string;
@@ -27,7 +28,9 @@ interface Transaction {
 
 export function ClientList() {
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
+  const [selectedClientName, setSelectedClientName] = useState<string>("");
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
   const queryClient = useQueryClient();
   
   const { data: clients, isLoading } = useQuery({
@@ -97,9 +100,16 @@ export function ClientList() {
     }
   });
 
-  const handleViewHistory = (clientId: string) => {
+  const handleViewHistory = (clientId: string, clientName: string) => {
     setSelectedClient(clientId);
+    setSelectedClientName(clientName);
     setIsHistoryOpen(true);
+  };
+
+  const handleViewInvoice = (clientId: string, clientName: string) => {
+    setSelectedClient(clientId);
+    setSelectedClientName(clientName);
+    setIsInvoiceOpen(true);
   };
 
   const handleDeleteTransaction = (transactionId: string) => {
@@ -111,8 +121,6 @@ export function ClientList() {
   if (isLoading) {
     return <div className="text-center p-4">Carregando...</div>;
   }
-
-  const selectedClientName = clients?.find(c => c.id === selectedClient)?.name;
 
   return (
     <>
@@ -149,7 +157,11 @@ export function ClientList() {
                 <TableCell>
                   <div className="flex gap-2">
                     <CreateDebtDialog clientId={client.id} clientName={client.name} />
-                    <Button variant="outline" size="sm">
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => handleViewInvoice(client.id, client.name)}
+                    >
                       <CreditCard className="h-4 w-4 mr-1" />
                       Faturas
                     </Button>
@@ -160,7 +172,7 @@ export function ClientList() {
                     <Button 
                       variant="outline" 
                       size="sm"
-                      onClick={() => handleViewHistory(client.id)}
+                      onClick={() => handleViewHistory(client.id, client.name)}
                     >
                       <History className="h-4 w-4 mr-1" />
                       Histórico
@@ -239,6 +251,15 @@ export function ClientList() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {selectedClient && (
+        <InvoiceDialog
+          clientId={selectedClient}
+          clientName={selectedClientName}
+          open={isInvoiceOpen}
+          onOpenChange={setIsInvoiceOpen}
+        />
+      )}
     </>
   );
 }
