@@ -20,32 +20,47 @@ interface InvoiceDialogProps {
 export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: InvoiceDialogProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
-  const { data: invoiceDebts, refetch } = useQuery({
+  const { data: invoiceData, refetch } = useQuery({
     queryKey: ['invoice-debts', clientId, format(currentMonth, 'yyyy-MM')],
     queryFn: async () => {
       const startDate = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
       const endDate = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
       
-      const { data, error } = await supabase
+      // Fetch debts
+      const { data: debts, error: debtsError } = await supabase
         .from('debts')
-        .select('*')
+        .select(`
+          *,
+          payments (
+            amount,
+            payment_date,
+            payment_method
+          )
+        `)
         .eq('client_id', clientId)
         .gte('invoice_month', startDate)
         .lte('invoice_month', endDate)
         .order('invoice_month', { ascending: true });
 
-      if (error) {
+      if (debtsError) {
         toast.error('Erro ao carregar faturas');
-        throw error;
+        throw debtsError;
       }
-      return data;
+
+      return debts;
     }
   });
 
-  const totalAmount = invoiceDebts?.reduce((sum, debt) => sum + Number(debt.amount), 0) || 0;
-  const pendingAmount = invoiceDebts?.reduce((sum, debt) => 
-    debt.status === 'pending' ? sum + Number(debt.amount) : sum, 0
-  ) || 0;
+  const calculateDebtStatus = (debt: any) => {
+    const totalPaid = debt.payments?.reduce((sum: number, payment: any) => sum + Number(payment.amount), 0) || 0;
+    return totalPaid >= Number(debt.amount) ? 'paid' : 'pending';
+  };
+
+  const totalAmount = invoiceData?.reduce((sum, debt) => sum + Number(debt.amount), 0) || 0;
+  const pendingAmount = invoiceData?.reduce((sum, debt) => {
+    const status = calculateDebtStatus(debt);
+    return status === 'pending' ? sum + Number(debt.amount) : sum;
+  }, 0) || 0;
 
   const handlePreviousMonth = () => {
     setCurrentMonth(prev => subMonths(prev, 1));
@@ -100,55 +115,69 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
                 <TableHead>Valor</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Mês Referência</TableHead>
+                <TableHead>Pagamentos</TableHead>
                 <TableHead>Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {invoiceDebts?.map((debt) => (
-                <TableRow key={debt.id}>
-                  <TableCell>
-                    {debt.transaction_date ? 
-                      format(parseISO(debt.transaction_date), 'dd/MM/yyyy') : 
-                      '-'
-                    }
-                  </TableCell>
-                  <TableCell>{debt.description || '-'}</TableCell>
-                  <TableCell>R$ {Number(debt.amount).toFixed(2)}</TableCell>
-                  <TableCell>
-                    <div className="flex items-center gap-2">
-                      {debt.status === 'pending' ? (
-                        <>
-                          <AlertCircle className="h-4 w-4 text-warning" />
-                          <span className="text-warning">Pendente</span>
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle2 className="h-4 w-4 text-success" />
-                          <span className="text-success">Pago</span>
-                        </>
+              {invoiceData?.map((debt) => {
+                const status = calculateDebtStatus(debt);
+                const totalPaid = debt.payments?.reduce((sum: number, payment: any) => sum + Number(payment.amount), 0) || 0;
+                
+                return (
+                  <TableRow key={debt.id}>
+                    <TableCell>
+                      {debt.transaction_date ? 
+                        format(parseISO(debt.transaction_date), 'dd/MM/yyyy') : 
+                        '-'
+                      }
+                    </TableCell>
+                    <TableCell>{debt.description || '-'}</TableCell>
+                    <TableCell>R$ {Number(debt.amount).toFixed(2)}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center gap-2">
+                        {status === 'pending' ? (
+                          <>
+                            <AlertCircle className="h-4 w-4 text-warning" />
+                            <span className="text-warning">Pendente</span>
+                          </>
+                        ) : (
+                          <>
+                            <CheckCircle2 className="h-4 w-4 text-success" />
+                            <span className="text-success">Pago</span>
+                          </>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {debt.invoice_month ? 
+                        format(parseISO(debt.invoice_month), "MMMM 'de' yyyy", { locale: ptBR }) : 
+                        '-'
+                      }
+                    </TableCell>
+                    <TableCell>
+                      <div className="text-sm">
+                        <div>Total Pago: R$ {totalPaid.toFixed(2)}</div>
+                        <div className="text-xs text-muted-foreground">
+                          {debt.payments?.length || 0} pagamento(s)
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {status === 'pending' && (
+                        <CreatePaymentDialog 
+                          debtId={debt.id} 
+                          amount={Number(debt.amount) - totalPaid}
+                          onPaymentComplete={handlePaymentComplete}
+                        />
                       )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {debt.invoice_month ? 
-                      format(parseISO(debt.invoice_month), "MMMM 'de' yyyy", { locale: ptBR }) : 
-                      '-'
-                    }
-                  </TableCell>
-                  <TableCell>
-                    {debt.status === 'pending' && (
-                      <CreatePaymentDialog 
-                        debtId={debt.id} 
-                        amount={Number(debt.amount)}
-                        onPaymentComplete={handlePaymentComplete}
-                      />
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-              {(!invoiceDebts || invoiceDebts.length === 0) && (
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+              {(!invoiceData || invoiceData.length === 0) && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-4">
+                  <TableCell colSpan={7} className="text-center py-4">
                     Nenhum débito encontrado para este mês
                   </TableCell>
                 </TableRow>

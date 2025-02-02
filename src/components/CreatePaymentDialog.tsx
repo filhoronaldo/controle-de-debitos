@@ -78,14 +78,6 @@ export function CreatePaymentDialog({ debtId, amount, onPaymentComplete }: Creat
 
       if (paymentError) throw paymentError;
 
-      // Update debt status
-      const { error: debtError } = await supabase
-        .from('debts')
-        .update({ status: 'paid' })
-        .eq('id', debtId);
-
-      if (debtError) throw debtError;
-
       toast({
         title: "Pagamento registrado com sucesso!",
         description: `Pagamento de ${formatCurrency(data.amount.toString())} registrado`,
