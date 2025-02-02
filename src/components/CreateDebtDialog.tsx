@@ -43,7 +43,7 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
   const form = useForm<DebtFormValues>({
     resolver: zodResolver(debtFormSchema),
     defaultValues: {
-      amount: "",
+      amount: "0",
       description: "",
       transaction_date: new Date().toISOString().split('T')[0],
     },
