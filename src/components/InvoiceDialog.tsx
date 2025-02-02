@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, AlertCircle, CheckCircle2, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO, startOfMonth, endOfMonth, addMonths, subMonths } from "date-fns";
@@ -42,29 +42,24 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
         throw debtsError;
       }
 
-      // Transform the data to include both debts and payments in a single array
       const transactions = debts.reduce((acc: any[], debt: any) => {
-        // Add the debt transaction
         acc.push({
           id: debt.id,
           date: debt.transaction_date || debt.created_at,
           description: debt.description,
           amount: debt.amount,
           type: 'debt',
-          status: debt.status,
           invoice_month: debt.invoice_month
         });
 
-        // Add all payment transactions for this debt
         if (debt.payments) {
           debt.payments.forEach((payment: any) => {
             acc.push({
               id: payment.id,
               date: payment.payment_date,
               description: `Pagamento - ${debt.description || 'Sem descrição'}`,
-              amount: -payment.amount, // Negative to show it's a payment
+              amount: -payment.amount,
               type: 'payment',
-              status: 'paid',
               payment_method: payment.payment_method,
               invoice_month: payment.invoice_month
             });
@@ -74,14 +69,12 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
         return acc;
       }, []);
 
-      // Sort all transactions by date
       return transactions.sort((a: any, b: any) => 
         new Date(a.date).getTime() - new Date(b.date).getTime()
       );
     }
   });
 
-  // Add effect to refetch when dialog opens
   useEffect(() => {
     if (open) {
       refetch();
@@ -121,8 +114,7 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
     toast.success('Pagamento registrado com sucesso!');
   };
 
-  // Get the first pending debt ID for the payment dialog
-  const firstPendingDebtId = invoiceData?.find(t => t.type === 'debt' && t.status === 'pending')?.id || null;
+  const firstPendingDebtId = invoiceData?.find(t => t.type === 'debt')?.id || null;
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -138,8 +130,6 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
     const localDate = new Date(date.getTime() + timezoneOffset);
     return format(localDate, "MMMM 'de' yyyy", { locale: ptBR });
   };
-
-  // ... keep existing code (rest of the component JSX)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -195,7 +185,6 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
                 <TableHead>Data</TableHead>
                 <TableHead>Descrição</TableHead>
                 <TableHead>Valor</TableHead>
-                <TableHead>Status</TableHead>
                 <TableHead>Mês Referência</TableHead>
               </TableRow>
             </TableHeader>
@@ -215,30 +204,13 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
                       ` (${transaction.payment_method})`}
                   </TableCell>
                   <TableCell>
-                    <div className="flex items-center gap-2">
-                      {transaction.status === 'pending' ? (
-                        <>
-                          <AlertCircle className="h-4 w-4 text-warning" />
-                          <span className="text-warning">Pendente</span>
-                        </>
-                      ) : (
-                        <>
-                          <CheckCircle2 className="h-4 w-4 text-success" />
-                          <span className="text-success">
-                            {transaction.type === 'payment' ? 'Pagamento' : 'Pago'}
-                          </span>
-                        </>
-                      )}
-                    </div>
-                  </TableCell>
-                  <TableCell>
                     {formatMonthYear(transaction.invoice_month)}
                   </TableCell>
                 </TableRow>
               ))}
               {(!invoiceData || invoiceData.length === 0) && (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-4">
+                  <TableCell colSpan={4} className="text-center py-4">
                     Nenhuma transação encontrada para este mês
                   </TableCell>
                 </TableRow>

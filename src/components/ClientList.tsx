@@ -1,6 +1,6 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, CheckCircle2, CreditCard, History, Trash2, User } from "lucide-react";
+import { CreditCard, History, Trash2, User } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { CreateDebtDialog } from "./CreateDebtDialog";
@@ -23,7 +23,6 @@ interface Transaction {
   amount: number;
   description: string;
   transaction_date: string;
-  status: string;
   invoice_month: string;
 }
 
@@ -45,8 +44,7 @@ export function ClientList() {
           name,
           debts (
             amount,
-            transaction_date,
-            status
+            transaction_date
           )
         `);
 
@@ -55,7 +53,7 @@ export function ClientList() {
       return data.map((client: any) => {
         const totalDebt = client.debts.reduce((sum: number, debt: any) => sum + Number(debt.amount), 0);
         const hasOverdueBills = client.debts.some((debt: any) => {
-          return debt.transaction_date && parseISO(debt.transaction_date) < new Date() && debt.status === 'pending';
+          return debt.transaction_date && parseISO(debt.transaction_date) < new Date();
         });
 
         return {
@@ -150,15 +148,9 @@ export function ClientList() {
                 <TableCell>
                   <div className="flex items-center gap-2">
                     {client.is_overdue ? (
-                      <>
-                        <AlertCircle className="h-4 w-4 text-destructive" />
-                        <span className="text-destructive">Atrasado</span>
-                      </>
+                      <span className="text-destructive">Atrasado</span>
                     ) : (
-                      <>
-                        <CheckCircle2 className="h-4 w-4 text-green-500" />
-                        <span className="text-green-500">Em dia</span>
-                      </>
+                      <span className="text-green-500">Em dia</span>
                     )}
                   </div>
                 </TableCell>
@@ -209,7 +201,6 @@ export function ClientList() {
                   <TableHead>Data</TableHead>
                   <TableHead>Descrição</TableHead>
                   <TableHead>Valor</TableHead>
-                  <TableHead>Status</TableHead>
                   <TableHead>Mês Referência</TableHead>
                   <TableHead>Ações</TableHead>
                 </TableRow>
@@ -225,21 +216,6 @@ export function ClientList() {
                     </TableCell>
                     <TableCell>{transaction.description || '-'}</TableCell>
                     <TableCell>R$ {Number(transaction.amount).toFixed(2)}</TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {transaction.status === 'pending' ? (
-                          <>
-                            <AlertCircle className="h-4 w-4 text-warning" />
-                            <span className="text-warning">Pendente</span>
-                          </>
-                        ) : (
-                          <>
-                            <CheckCircle2 className="h-4 w-4 text-success" />
-                            <span className="text-success">Pago</span>
-                          </>
-                        )}
-                      </div>
-                    </TableCell>
                     <TableCell>
                       {transaction.invoice_month ? 
                         format(parseISO(transaction.invoice_month), 'MM/yyyy') : 

@@ -52,16 +52,9 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
   });
 
   const formatCurrency = (value: string) => {
-    // Remove tudo que não é número
     let numbers = value.replace(/\D/g, "");
-    
-    // Se não houver números, retorna zero formatado
     if (!numbers) return "R$ 0,00";
-    
-    // Converte para número mantendo os zeros à direita
     const amount = parseFloat(numbers) / 100;
-    
-    // Formata o número mantendo sempre duas casas decimais
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
@@ -100,7 +93,6 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
           description: data.description,
           transaction_date: data.transaction_date,
           invoice_month: data.invoice_month ? `${data.invoice_month}-01` : null,
-          status: 'pending',
         });
 
       if (error) throw error;
