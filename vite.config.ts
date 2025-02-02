@@ -10,7 +10,7 @@ export default defineConfig(({ mode }) => ({
     port: 8080,
     hmr: {
       protocol: 'wss', // Use secure WebSocket
-      host: 'localhost',
+      host: 'b08a073a-d3a5-4578-b32a-26ea39ecacc4.lovableproject.com',
       port: 443,
       clientPort: 443,
     },
