@@ -5,10 +5,10 @@ import { componentTagger } from "lovable-tagger";
 
 export default defineConfig(({ mode }) => ({
   server: {
-    host: "::",
+    host: "localhost",
     port: 8080,
     hmr: {
-      protocol: 'ws', // Changed from 'wss' to 'ws' for local development
+      protocol: 'ws',
       host: 'localhost',
       port: 8080,
     },
