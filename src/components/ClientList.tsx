@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { CreateDebtDialog } from "./CreateDebtDialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useState } from "react";
-import { format } from "date-fns";
+import { format, parseISO } from "date-fns";
 import { toast } from "sonner";
 
 interface Client {
@@ -50,7 +50,7 @@ export function ClientList() {
       return data.map((client: any) => {
         const totalDebt = client.debts.reduce((sum: number, debt: any) => sum + Number(debt.amount), 0);
         const hasOverdueBills = client.debts.some((debt: any) => {
-          return debt.transaction_date && new Date(debt.transaction_date) < new Date() && debt.status === 'pending';
+          return debt.transaction_date && parseISO(debt.transaction_date) < new Date() && debt.status === 'pending';
         });
 
         return {
@@ -195,7 +195,7 @@ export function ClientList() {
                   <TableRow key={transaction.id}>
                     <TableCell>
                       {transaction.transaction_date ? 
-                        format(new Date(transaction.transaction_date), 'dd/MM/yyyy') : 
+                        format(parseISO(transaction.transaction_date), 'dd/MM/yyyy') : 
                         '-'
                       }
                     </TableCell>
@@ -218,7 +218,7 @@ export function ClientList() {
                     </TableCell>
                     <TableCell>
                       {transaction.invoice_month ? 
-                        format(new Date(transaction.invoice_month), 'MM/yyyy') : 
+                        format(parseISO(transaction.invoice_month), 'MM/yyyy') : 
                         '-'
                       }
                     </TableCell>
