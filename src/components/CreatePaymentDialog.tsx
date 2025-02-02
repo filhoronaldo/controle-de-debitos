@@ -103,23 +103,25 @@ export function CreatePaymentDialog({ debtId, amount, onPaymentComplete, trigger
 
       if (paymentError) throw paymentError;
 
-      // Then, fetch all debts for this invoice month to update their status
+      // Then, fetch all debts for this invoice month
       if (invoiceMonth) {
         const { data: monthDebts, error: debtsError } = await supabase
           .from('debts')
           .select(`
             id,
             amount,
+            invoice_month,
             payments (
-              amount
+              amount,
+              payment_date
             )
           `)
           .eq('invoice_month', invoiceMonth);
 
         if (debtsError) throw debtsError;
 
-        // Update status for each debt based on payments
-        for (const debt of monthDebts || []) {
+        // Update status for each debt based on total payments
+        const updatePromises = monthDebts?.map(async (debt) => {
           const totalPaid = (debt.payments || []).reduce((sum: number, payment: any) => sum + Number(payment.amount), 0);
           const status = totalPaid >= Number(debt.amount) ? 'paid' : 'pending';
 
@@ -131,6 +133,10 @@ export function CreatePaymentDialog({ debtId, amount, onPaymentComplete, trigger
           if (updateError) {
             console.error('Error updating debt status:', updateError);
           }
+        });
+
+        if (updatePromises) {
+          await Promise.all(updatePromises);
         }
       }
 
