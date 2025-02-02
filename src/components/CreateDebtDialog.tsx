@@ -52,16 +52,16 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
   });
 
   const formatCurrency = (value: string) => {
-    // Remove qualquer caractere que não seja número
-    const numbers = value.replace(/\D/g, "");
+    // Remove tudo que não é número
+    let numbers = value.replace(/\D/g, "");
     
-    // Mantém os zeros à direita
-    const paddedNumbers = numbers.padStart(3, "0");
+    // Se não houver números, retorna zero formatado
+    if (!numbers) return "R$ 0,00";
     
-    // Converte para número e divide por 100 para ter os centavos
-    const amount = parseInt(paddedNumbers, 10) / 100;
+    // Converte para número mantendo os zeros à direita
+    const amount = parseFloat(numbers) / 100;
     
-    // Formata o número como moeda
+    // Formata o número mantendo sempre duas casas decimais
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
@@ -71,10 +71,8 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
   };
 
   const parseCurrencyToNumber = (value: string) => {
-    // Remove todos os caracteres não numéricos
     const numbers = value.replace(/\D/g, "");
-    // Mantém os zeros e divide por 100
-    return numbers ? parseInt(numbers, 10) / 100 : 0;
+    return numbers ? parseFloat(numbers) / 100 : 0;
   };
 
   const navigateMonth = (direction: 'next' | 'previous') => {
@@ -149,12 +147,11 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
                       placeholder="R$ 0,00"
                       {...field}
                       onChange={(e) => {
-                        const rawValue = e.target.value.replace(/[^\d]/g, '');
-                        const formatted = formatCurrency(rawValue);
+                        const formatted = formatCurrency(e.target.value);
                         e.target.value = formatted;
                         field.onChange(parseCurrencyToNumber(formatted));
                       }}
-                      value={formatCurrency(field.value.toString())}
+                      value={formatCurrency((field.value * 100).toString())}
                     />
                   </FormControl>
                   <FormMessage />
