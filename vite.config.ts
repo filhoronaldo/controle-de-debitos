@@ -15,7 +15,8 @@ export default defineConfig({
     port: 8080,
     hmr: {
       clientPort: 443,
-      protocol: 'wss'
+      protocol: 'wss',
+      host: process.env.VITE_DEV_SERVER_HOST || undefined
     }
   }
 });
