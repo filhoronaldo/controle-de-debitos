@@ -1,17 +1,15 @@
 import { DashboardCard } from "@/components/DashboardCard";
 import { ClientList } from "@/components/ClientList";
 import { Button } from "@/components/ui/button";
-import { CreditCard, DollarSign, Plus, Receipt, User } from "lucide-react";
+import { CreditCard, DollarSign, Receipt, User } from "lucide-react";
+import { CreateClientDialog } from "@/components/CreateClientDialog";
 
 const Index = () => {
   return (
     <div className="container mx-auto p-6 space-y-8 animate-fadeIn">
       <div className="flex justify-between items-center">
         <h1 className="text-3xl font-heading font-bold">Controle de Débitos</h1>
-        <Button className="bg-success hover:bg-success/90">
-          <Plus className="h-4 w-4 mr-2" />
-          Novo Cliente
-        </Button>
+        <CreateClientDialog />
       </div>
 
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
