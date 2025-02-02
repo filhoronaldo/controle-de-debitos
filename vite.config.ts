@@ -8,6 +8,11 @@ export default defineConfig(({ mode }) => ({
   server: {
     host: "::",
     port: 8080,
+    hmr: {
+      // Disable WebSocket connection and fallback to polling
+      protocol: 'ws',
+      clientPort: 443,
+    },
   },
   plugins: [
     react(),
