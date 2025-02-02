@@ -23,7 +23,7 @@ export function ClientList() {
           name,
           debts (
             amount,
-            due_date,
+            transaction_date,
             status
           )
         `);
@@ -33,7 +33,7 @@ export function ClientList() {
       return data.map((client: any) => {
         const totalDebt = client.debts.reduce((sum: number, debt: any) => sum + Number(debt.amount), 0);
         const hasOverdueBills = client.debts.some((debt: any) => {
-          return debt.due_date && new Date(debt.due_date) < new Date() && debt.status === 'pending';
+          return debt.transaction_date && new Date(debt.transaction_date) < new Date() && debt.status === 'pending';
         });
 
         return {
