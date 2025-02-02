@@ -72,16 +72,9 @@ export function CreatePaymentDialog({ debtId, amount, onPaymentComplete, trigger
   });
 
   const formatCurrency = (value: string) => {
-    // Remove tudo que não é número
     let numbers = value.replace(/\D/g, "");
-    
-    // Se não houver números, retorna zero formatado
     if (!numbers) return "R$ 0,00";
-    
-    // Converte para número mantendo os zeros à direita
     const amount = parseFloat(numbers) / 100;
-    
-    // Formata o número mantendo sempre duas casas decimais
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
@@ -97,6 +90,7 @@ export function CreatePaymentDialog({ debtId, amount, onPaymentComplete, trigger
 
   const onSubmit = async (data: PaymentFormValues) => {
     try {
+      // First, register the payment
       const { error: paymentError } = await supabase
         .from('payments')
         .insert({
@@ -109,12 +103,44 @@ export function CreatePaymentDialog({ debtId, amount, onPaymentComplete, trigger
 
       if (paymentError) throw paymentError;
 
+      // Then, fetch all debts for this invoice month to update their status
+      if (invoiceMonth) {
+        const { data: monthDebts, error: debtsError } = await supabase
+          .from('debts')
+          .select(`
+            id,
+            amount,
+            payments (
+              amount
+            )
+          `)
+          .eq('invoice_month', invoiceMonth);
+
+        if (debtsError) throw debtsError;
+
+        // Update status for each debt based on payments
+        for (const debt of monthDebts || []) {
+          const totalPaid = (debt.payments || []).reduce((sum: number, payment: any) => sum + Number(payment.amount), 0);
+          const status = totalPaid >= Number(debt.amount) ? 'paid' : 'pending';
+
+          const { error: updateError } = await supabase
+            .from('debts')
+            .update({ status })
+            .eq('id', debt.id);
+
+          if (updateError) {
+            console.error('Error updating debt status:', updateError);
+          }
+        }
+      }
+
       toast({
         title: "Pagamento registrado com sucesso!",
         description: `Pagamento de ${formatCurrency(data.amount.toString())} registrado`,
       });
 
       queryClient.invalidateQueries({ queryKey: ['invoice-debts'] });
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
       form.reset();
       onPaymentComplete?.();
     } catch (error) {
