@@ -23,7 +23,6 @@ import { useToast } from "@/components/ui/use-toast";
 
 interface CreateClientForm {
   name: string;
-  email?: string;
   phone?: string;
 }
 
@@ -83,23 +82,10 @@ export function CreateClientDialog() {
             />
             <FormField
               control={form.control}
-              name="email"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Email</FormLabel>
-                  <FormControl>
-                    <Input type="email" placeholder="email@exemplo.com" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <FormField
-              control={form.control}
               name="phone"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Telefone</FormLabel>
+                  <FormLabel>WhatsApp</FormLabel>
                   <FormControl>
                     <Input placeholder="(00) 00000-0000" {...field} />
                   </FormControl>
