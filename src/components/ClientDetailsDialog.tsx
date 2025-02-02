@@ -207,7 +207,7 @@ export function ClientDetailsDialog({ clientId, clientName, open, onOpenChange }
                     <MessageSquare className="h-5 w-5" />
                   </Button>
                   <span className={client.is_whatsapp ? "text-green-500" : "text-gray-400"}>
-                    WhatsApp
+                    {client.is_whatsapp ? "Tem WhatsApp" : "Não tem WhatsApp"}
                   </span>
                 </div>
               </div>
