@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO, startOfMonth, endOfMonth, addMonths, subMonths } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { useState } from "react";
 
 interface InvoiceDialogProps {
@@ -57,7 +58,7 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
                 <ChevronLeft className="h-4 w-4" />
               </Button>
               <span className="font-medium">
-                {format(currentMonth, 'MMMM/yyyy')}
+                {format(currentMonth, "MMMM'/'yyyy", { locale: ptBR })}
               </span>
               <Button variant="outline" size="icon" onClick={handleNextMonth}>
                 <ChevronRight className="h-4 w-4" />
@@ -99,7 +100,7 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
                   </TableCell>
                   <TableCell>
                     {debt.invoice_month ? 
-                      format(parseISO(debt.invoice_month), 'MM/yyyy') : 
+                      format(parseISO(debt.invoice_month), "MMMM'/'yyyy", { locale: ptBR }) : 
                       '-'
                     }
                   </TableCell>
