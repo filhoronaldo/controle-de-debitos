@@ -86,6 +86,7 @@ export type Database = {
           created_at: string
           debt_id: string
           id: string
+          invoice_month: string
           payment_date: string
           payment_method: string | null
         }
@@ -94,6 +95,7 @@ export type Database = {
           created_at?: string
           debt_id: string
           id?: string
+          invoice_month: string
           payment_date?: string
           payment_method?: string | null
         }
@@ -102,6 +104,7 @@ export type Database = {
           created_at?: string
           debt_id?: string
           id?: string
+          invoice_month?: string
           payment_date?: string
           payment_method?: string | null
         }

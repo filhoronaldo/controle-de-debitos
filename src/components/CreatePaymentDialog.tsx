@@ -21,6 +21,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
 
 const paymentFormSchema = z.object({
   amount: z.coerce.number().min(0.01, "O valor deve ser maior que zero"),
@@ -39,6 +40,29 @@ interface CreatePaymentDialogProps {
 export function CreatePaymentDialog({ debtId, amount, onPaymentComplete, trigger }: CreatePaymentDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const [invoiceMonth, setInvoiceMonth] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchDebtDetails = async () => {
+      const { data: debt, error } = await supabase
+        .from('debts')
+        .select('invoice_month')
+        .eq('id', debtId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching debt details:', error);
+        return;
+      }
+
+      if (debt?.invoice_month) {
+        setInvoiceMonth(debt.invoice_month);
+      }
+    };
+
+    fetchDebtDetails();
+  }, [debtId]);
+
   const form = useForm<PaymentFormValues>({
     resolver: zodResolver(paymentFormSchema),
     defaultValues: {
@@ -80,6 +104,7 @@ export function CreatePaymentDialog({ debtId, amount, onPaymentComplete, trigger
           amount: data.amount,
           payment_date: data.payment_date,
           payment_method: 'manual',
+          invoice_month: invoiceMonth,
         });
 
       if (paymentError) throw paymentError;
