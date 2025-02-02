@@ -47,21 +47,32 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
       amount: 0,
       description: "",
       transaction_date: new Date().toISOString().split('T')[0],
-      invoice_month: new Date().toISOString().split('T')[0].substring(0, 7), // YYYY-MM format
+      invoice_month: new Date().toISOString().split('T')[0].substring(0, 7),
     },
   });
 
   const formatCurrency = (value: string) => {
-    let number = value.replace(/\D/g, "");
-    const decimal = parseFloat(number) / 100;
+    // Remove tudo que não for número
+    const numbers = value.replace(/\D/g, "");
+    
+    // Se não houver números, retorna R$ 0,00
+    if (numbers === "") return "R$ 0,00";
+    
+    // Converte para número e divide por 100 para ter os centavos
+    const amount = parseInt(numbers, 10) / 100;
+    
+    // Formata o número como moeda
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'
-    }).format(decimal);
+    }).format(amount);
   };
 
   const parseCurrencyToNumber = (value: string) => {
-    return Number(value.replace(/[R$\s.]/g, '').replace(',', '.'));
+    // Remove todos os caracteres não numéricos
+    const numbers = value.replace(/\D/g, "");
+    // Converte para número e divide por 100
+    return numbers ? parseInt(numbers, 10) / 100 : 0;
   };
 
   const navigateMonth = (direction: 'next' | 'previous') => {
