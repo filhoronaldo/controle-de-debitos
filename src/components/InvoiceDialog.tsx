@@ -1,13 +1,14 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, AlertCircle, CheckCircle2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO, startOfMonth, endOfMonth, addMonths, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useState } from "react";
 import { CreatePaymentDialog } from "./CreatePaymentDialog";
+import { toast } from "sonner";
 
 interface InvoiceDialogProps {
   clientId: string;
@@ -33,12 +34,18 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
         .lte('invoice_month', endDate)
         .order('invoice_month', { ascending: true });
 
-      if (error) throw error;
+      if (error) {
+        toast.error('Erro ao carregar faturas');
+        throw error;
+      }
       return data;
     }
   });
 
   const totalAmount = invoiceDebts?.reduce((sum, debt) => sum + Number(debt.amount), 0) || 0;
+  const pendingAmount = invoiceDebts?.reduce((sum, debt) => 
+    debt.status === 'pending' ? sum + Number(debt.amount) : sum, 0
+  ) || 0;
 
   const handlePreviousMonth = () => {
     setCurrentMonth(prev => subMonths(prev, 1));
@@ -46,6 +53,11 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
 
   const handleNextMonth = () => {
     setCurrentMonth(prev => addMonths(prev, 1));
+  };
+
+  const handlePaymentComplete = () => {
+    refetch();
+    toast.success('Pagamento registrado com sucesso!');
   };
 
   return (
@@ -69,10 +81,15 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
         </DialogHeader>
 
         <div className="mt-6">
-          <div className="mb-4 text-right">
-            <span className="text-lg font-semibold">
-              Total: R$ {totalAmount.toFixed(2)}
-            </span>
+          <div className="mb-4 flex justify-between items-center">
+            <div className="space-y-1">
+              <div className="text-sm text-muted-foreground">
+                Total Pendente: <span className="font-medium text-foreground">R$ {pendingAmount.toFixed(2)}</span>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                Total do Mês: <span className="font-medium text-foreground">R$ {totalAmount.toFixed(2)}</span>
+              </div>
+            </div>
           </div>
 
           <Table>
@@ -98,7 +115,19 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
                   <TableCell>{debt.description || '-'}</TableCell>
                   <TableCell>R$ {Number(debt.amount).toFixed(2)}</TableCell>
                   <TableCell>
-                    {debt.status === 'pending' ? 'Pendente' : 'Pago'}
+                    <div className="flex items-center gap-2">
+                      {debt.status === 'pending' ? (
+                        <>
+                          <AlertCircle className="h-4 w-4 text-warning" />
+                          <span className="text-warning">Pendente</span>
+                        </>
+                      ) : (
+                        <>
+                          <CheckCircle2 className="h-4 w-4 text-success" />
+                          <span className="text-success">Pago</span>
+                        </>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell>
                     {debt.invoice_month ? 
@@ -111,7 +140,7 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
                       <CreatePaymentDialog 
                         debtId={debt.id} 
                         amount={Number(debt.amount)}
-                        onPaymentComplete={refetch}
+                        onPaymentComplete={handlePaymentComplete}
                       />
                     )}
                   </TableCell>
