@@ -19,8 +19,6 @@ interface InvoiceDialogProps {
 
 export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: InvoiceDialogProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
-  const [selectedDebtId, setSelectedDebtId] = useState<string | null>(null);
-  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
 
   const { data: invoiceData, refetch } = useQuery({
     queryKey: ['invoice-debts', clientId, format(currentMonth, 'yyyy-MM')],
@@ -73,9 +71,11 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
 
   const handlePaymentComplete = () => {
     refetch();
-    setIsPaymentDialogOpen(false);
     toast.success('Pagamento registrado com sucesso!');
   };
+
+  // Get the first pending debt ID for the payment dialog
+  const firstPendingDebtId = invoiceData?.find(debt => calculateDebtStatus(debt) === 'pending')?.id || null;
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -110,17 +110,19 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
                 Total Pago: <span className="font-medium text-success">R$ {totalPaid.toFixed(2)}</span>
               </div>
             </div>
-            <CreatePaymentDialog 
-              debtId={selectedDebtId || ''} 
-              amount={pendingAmount}
-              onPaymentComplete={handlePaymentComplete}
-              trigger={
-                <Button>
-                  <Plus className="h-4 w-4 mr-2" />
-                  Registrar Pagamento
-                </Button>
-              }
-            />
+            {firstPendingDebtId && (
+              <CreatePaymentDialog 
+                debtId={firstPendingDebtId} 
+                amount={pendingAmount}
+                onPaymentComplete={handlePaymentComplete}
+                trigger={
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Registrar Pagamento
+                  </Button>
+                }
+              />
+            )}
           </div>
 
           <Table>
@@ -131,7 +133,6 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
                 <TableHead>Valor</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Mês Referência</TableHead>
-                <TableHead>Pagamentos</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -140,7 +141,7 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
                 const totalPaid = debt.payments?.reduce((sum: number, payment: any) => sum + Number(payment.amount), 0) || 0;
                 
                 return (
-                  <TableRow key={debt.id} onClick={() => setSelectedDebtId(debt.id)}>
+                  <TableRow key={debt.id}>
                     <TableCell>
                       {debt.transaction_date ? 
                         format(parseISO(debt.transaction_date), 'dd/MM/yyyy') : 
@@ -170,20 +171,12 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
                         '-'
                       }
                     </TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        <div>Total Pago: R$ {totalPaid.toFixed(2)}</div>
-                        <div className="text-xs text-muted-foreground">
-                          {debt.payments?.length || 0} pagamento(s)
-                        </div>
-                      </div>
-                    </TableCell>
                   </TableRow>
                 );
               })}
               {(!invoiceData || invoiceData.length === 0) && (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-4">
+                  <TableCell colSpan={5} className="text-center py-4">
                     Nenhum débito encontrado para este mês
                   </TableCell>
                 </TableRow>
