@@ -111,13 +111,11 @@ export function ClientDetailsDialog({ clientId, clientName, open, onOpenChange }
 
       if (error) throw error;
 
-      // Update the cache immediately
       queryClient.setQueryData(['client-details', clientId], (oldData: any) => ({
         ...oldData,
         is_whatsapp: !client.is_whatsapp,
       }));
 
-      // Also update the clients list cache if it exists
       queryClient.setQueryData(['clients'], (oldData: any) => {
         if (!oldData) return oldData;
         return oldData.map((client: any) => {
@@ -175,42 +173,40 @@ export function ClientDetailsDialog({ clientId, clientName, open, onOpenChange }
             )}
           </div>
 
-          <div className="flex items-center justify-between">
-            <div className="space-y-1">
-              <div className="text-sm font-medium">Telefone</div>
-              {isEditingPhone ? (
-                <div className="flex gap-2">
-                  <Input
-                    value={newPhone}
-                    onChange={(e) => setNewPhone(e.target.value)}
-                    placeholder="Novo telefone"
-                  />
-                  <Button onClick={handlePhoneEdit}>Salvar</Button>
-                  <Button variant="outline" onClick={() => setIsEditingPhone(false)}>
-                    Cancelar
-                  </Button>
-                </div>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <Phone className="h-4 w-4" />
-                  <span>{client.phone || "Não cadastrado"}</span>
-                  <Button variant="ghost" size="sm" onClick={() => {
-                    setNewPhone(client.phone || "");
-                    setIsEditingPhone(true);
-                  }}>
-                    Editar
-                  </Button>
-                </div>
-              )}
-            </div>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={handleWhatsAppToggle}
-              className={client.is_whatsapp ? "text-green-500 hover:text-green-600" : "text-gray-400 hover:text-gray-500"}
-            >
-              <MessageSquare className="h-5 w-5" />
-            </Button>
+          <div className="space-y-1">
+            <div className="text-sm font-medium">Telefone</div>
+            {isEditingPhone ? (
+              <div className="flex gap-2">
+                <Input
+                  value={newPhone}
+                  onChange={(e) => setNewPhone(e.target.value)}
+                  placeholder="Novo telefone"
+                />
+                <Button onClick={handlePhoneEdit}>Salvar</Button>
+                <Button variant="outline" onClick={() => setIsEditingPhone(false)}>
+                  Cancelar
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Phone className="h-4 w-4" />
+                <span>{client.phone || "Não cadastrado"}</span>
+                <Button variant="ghost" size="sm" onClick={() => {
+                  setNewPhone(client.phone || "");
+                  setIsEditingPhone(true);
+                }}>
+                  Editar
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={handleWhatsAppToggle}
+                  className={client.is_whatsapp ? "text-green-500 hover:text-green-600" : "text-gray-400 hover:text-gray-500"}
+                >
+                  <MessageSquare className="h-5 w-5" />
+                </Button>
+              </div>
+            )}
           </div>
         </div>
       </DialogContent>
