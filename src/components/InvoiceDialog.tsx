@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, AlertCircle, CheckCircle2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, AlertCircle, CheckCircle2, Plus } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO, startOfMonth, endOfMonth, addMonths, subMonths } from "date-fns";
@@ -19,6 +19,8 @@ interface InvoiceDialogProps {
 
 export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: InvoiceDialogProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
+  const [selectedDebtId, setSelectedDebtId] = useState<string | null>(null);
+  const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
 
   const { data: invoiceData, refetch } = useQuery({
     queryKey: ['invoice-debts', clientId, format(currentMonth, 'yyyy-MM')],
@@ -26,7 +28,6 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
       const startDate = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
       const endDate = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
       
-      // Fetch debts
       const { data: debts, error: debtsError } = await supabase
         .from('debts')
         .select(`
@@ -57,10 +58,10 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
   };
 
   const totalAmount = invoiceData?.reduce((sum, debt) => sum + Number(debt.amount), 0) || 0;
-  const pendingAmount = invoiceData?.reduce((sum, debt) => {
-    const status = calculateDebtStatus(debt);
-    return status === 'pending' ? sum + Number(debt.amount) : sum;
+  const totalPaid = invoiceData?.reduce((sum, debt) => {
+    return sum + (debt.payments?.reduce((pSum: number, payment: any) => pSum + Number(payment.amount), 0) || 0);
   }, 0) || 0;
+  const pendingAmount = totalAmount - totalPaid;
 
   const handlePreviousMonth = () => {
     setCurrentMonth(prev => subMonths(prev, 1));
@@ -72,6 +73,7 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
 
   const handlePaymentComplete = () => {
     refetch();
+    setIsPaymentDialogOpen(false);
     toast.success('Pagamento registrado com sucesso!');
   };
 
@@ -104,7 +106,21 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
               <div className="text-sm text-muted-foreground">
                 Total do Mês: <span className="font-medium text-foreground">R$ {totalAmount.toFixed(2)}</span>
               </div>
+              <div className="text-sm text-muted-foreground">
+                Total Pago: <span className="font-medium text-success">R$ {totalPaid.toFixed(2)}</span>
+              </div>
             </div>
+            <CreatePaymentDialog 
+              debtId={selectedDebtId || ''} 
+              amount={pendingAmount}
+              onPaymentComplete={handlePaymentComplete}
+              trigger={
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Registrar Pagamento
+                </Button>
+              }
+            />
           </div>
 
           <Table>
@@ -116,7 +132,6 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
                 <TableHead>Status</TableHead>
                 <TableHead>Mês Referência</TableHead>
                 <TableHead>Pagamentos</TableHead>
-                <TableHead>Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -125,7 +140,7 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
                 const totalPaid = debt.payments?.reduce((sum: number, payment: any) => sum + Number(payment.amount), 0) || 0;
                 
                 return (
-                  <TableRow key={debt.id}>
+                  <TableRow key={debt.id} onClick={() => setSelectedDebtId(debt.id)}>
                     <TableCell>
                       {debt.transaction_date ? 
                         format(parseISO(debt.transaction_date), 'dd/MM/yyyy') : 
@@ -163,21 +178,12 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
                         </div>
                       </div>
                     </TableCell>
-                    <TableCell>
-                      {status === 'pending' && (
-                        <CreatePaymentDialog 
-                          debtId={debt.id} 
-                          amount={Number(debt.amount) - totalPaid}
-                          onPaymentComplete={handlePaymentComplete}
-                        />
-                      )}
-                    </TableCell>
                   </TableRow>
                 );
               })}
               {(!invoiceData || invoiceData.length === 0) && (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center py-4">
+                  <TableCell colSpan={6} className="text-center py-4">
                     Nenhum débito encontrado para este mês
                   </TableCell>
                 </TableRow>

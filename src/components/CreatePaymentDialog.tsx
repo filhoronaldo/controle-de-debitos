@@ -21,7 +21,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
-import { format } from "date-fns";
 
 const paymentFormSchema = z.object({
   amount: z.coerce.number().min(0.01, "O valor deve ser maior que zero"),
@@ -34,9 +33,10 @@ interface CreatePaymentDialogProps {
   debtId: string;
   amount: number;
   onPaymentComplete?: () => void;
+  trigger?: React.ReactNode;
 }
 
-export function CreatePaymentDialog({ debtId, amount, onPaymentComplete }: CreatePaymentDialogProps) {
+export function CreatePaymentDialog({ debtId, amount, onPaymentComplete, trigger }: CreatePaymentDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const form = useForm<PaymentFormValues>({
@@ -66,7 +66,6 @@ export function CreatePaymentDialog({ debtId, amount, onPaymentComplete }: Creat
 
   const onSubmit = async (data: PaymentFormValues) => {
     try {
-      // Create payment record
       const { error: paymentError } = await supabase
         .from('payments')
         .insert({
@@ -99,9 +98,11 @@ export function CreatePaymentDialog({ debtId, amount, onPaymentComplete }: Creat
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
-          Pagar
-        </Button>
+        {trigger || (
+          <Button variant="outline" size="sm">
+            Pagar
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
