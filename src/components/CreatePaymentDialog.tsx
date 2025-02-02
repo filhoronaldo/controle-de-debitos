@@ -48,9 +48,13 @@ export function CreatePaymentDialog({ debtId, amount, onPaymentComplete, trigger
   });
 
   const formatCurrency = (value: string) => {
+    // Remove tudo que não é número
     const numbers = value.replace(/\D/g, "");
-    const paddedNumbers = numbers.padStart(3, "0");
-    const amount = parseInt(paddedNumbers, 10) / 100;
+    
+    // Converte para número e divide por 100 para ter os centavos
+    const amount = numbers ? parseFloat(numbers) / 100 : 0;
+    
+    // Formata o número mantendo sempre duas casas decimais
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
@@ -61,7 +65,7 @@ export function CreatePaymentDialog({ debtId, amount, onPaymentComplete, trigger
 
   const parseCurrencyToNumber = (value: string) => {
     const numbers = value.replace(/\D/g, "");
-    return numbers ? parseInt(numbers, 10) / 100 : 0;
+    return numbers ? parseFloat(numbers) / 100 : 0;
   };
 
   const onSubmit = async (data: PaymentFormValues) => {
@@ -121,8 +125,7 @@ export function CreatePaymentDialog({ debtId, amount, onPaymentComplete, trigger
                       placeholder="R$ 0,00"
                       {...field}
                       onChange={(e) => {
-                        const rawValue = e.target.value.replace(/[^\d]/g, '');
-                        const formatted = formatCurrency(rawValue);
+                        const formatted = formatCurrency(e.target.value);
                         e.target.value = formatted;
                         field.onChange(parseCurrencyToNumber(formatted));
                       }}
