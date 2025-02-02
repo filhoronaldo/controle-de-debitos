@@ -117,6 +117,15 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
   // Get the first pending debt ID for the payment dialog
   const firstPendingDebtId = invoiceData?.find(t => t.type === 'debt' && t.status === 'pending')?.id || null;
 
+  const formatDate = (dateString: string) => {
+    // Create a new Date object from the ISO string
+    const date = new Date(dateString);
+    // Add the timezone offset to get the correct local date
+    const timezoneOffset = date.getTimezoneOffset() * 60000;
+    const localDate = new Date(date.getTime() + timezoneOffset);
+    return format(localDate, 'dd/MM/yyyy');
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl">
@@ -182,7 +191,7 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
                   className={transaction.type === 'payment' ? 'bg-muted/30' : ''}
                 >
                   <TableCell>
-                    {format(new Date(transaction.date), 'dd/MM/yyyy')}
+                    {formatDate(transaction.date)}
                   </TableCell>
                   <TableCell>{transaction.description}</TableCell>
                   <TableCell className={transaction.type === 'payment' ? 'text-success' : ''}>
