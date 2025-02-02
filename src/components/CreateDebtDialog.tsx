@@ -28,6 +28,7 @@ const debtFormSchema = z.object({
   amount: z.coerce.number().min(0.01, "O valor deve ser maior que zero"),
   description: z.string().optional(),
   transaction_date: z.string().optional(),
+  invoice_month: z.string().optional(),
 });
 
 type DebtFormValues = z.infer<typeof debtFormSchema>;
@@ -46,6 +47,7 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
       amount: 0,
       description: "",
       transaction_date: new Date().toISOString().split('T')[0],
+      invoice_month: new Date().toISOString().split('T')[0].substring(0, 7), // YYYY-MM format
     },
   });
 
@@ -77,6 +79,7 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
           amount: data.amount,
           description: data.description,
           transaction_date: data.transaction_date,
+          invoice_month: data.invoice_month ? `${data.invoice_month}-01` : null,
           status: 'pending',
         });
 
@@ -156,6 +159,19 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
                   <FormLabel>Data da Transação</FormLabel>
                   <FormControl>
                     <Input type="date" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="invoice_month"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Mês/Ano da Fatura</FormLabel>
+                  <FormControl>
+                    <Input type="month" {...field} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
