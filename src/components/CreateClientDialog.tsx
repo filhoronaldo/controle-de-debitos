@@ -23,6 +23,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import InputMask from "input-mask-react";
 
 const formSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
@@ -104,7 +105,14 @@ export function CreateClientDialog() {
                 <FormItem>
                   <FormLabel>Telefone</FormLabel>
                   <FormControl>
-                    <Input placeholder="(00) 00000-0000" {...field} />
+                    <InputMask 
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+                      mask="(99) 99999-9999"
+                      replacement={{ 9: /[0-9]/ }}
+                      value={field.value}
+                      onChange={(e) => field.onChange(e.target.value)}
+                      placeholder="(00) 00000-0000"
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
