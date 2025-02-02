@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO, startOfMonth, endOfMonth, addMonths, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useState } from "react";
+import { CreatePaymentDialog } from "./CreatePaymentDialog";
 
 interface InvoiceDialogProps {
   clientId: string;
@@ -18,7 +19,7 @@ interface InvoiceDialogProps {
 export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: InvoiceDialogProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
-  const { data: invoiceDebts } = useQuery({
+  const { data: invoiceDebts, refetch } = useQuery({
     queryKey: ['invoice-debts', clientId, format(currentMonth, 'yyyy-MM')],
     queryFn: async () => {
       const startDate = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
@@ -82,6 +83,7 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
                 <TableHead>Valor</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Mês Referência</TableHead>
+                <TableHead>Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -104,11 +106,20 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
                       '-'
                     }
                   </TableCell>
+                  <TableCell>
+                    {debt.status === 'pending' && (
+                      <CreatePaymentDialog 
+                        debtId={debt.id} 
+                        amount={Number(debt.amount)}
+                        onPaymentComplete={refetch}
+                      />
+                    )}
+                  </TableCell>
                 </TableRow>
               ))}
               {(!invoiceDebts || invoiceDebts.length === 0) && (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-4">
+                  <TableCell colSpan={6} className="text-center py-4">
                     Nenhum débito encontrado para este mês
                   </TableCell>
                 </TableRow>
