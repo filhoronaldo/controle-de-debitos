@@ -15,7 +15,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { PlusCircle } from "lucide-react";
+import { ChevronLeft, ChevronRight, PlusCircle } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -52,13 +52,8 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
   });
 
   const formatCurrency = (value: string) => {
-    // Remove non-digit characters
     let number = value.replace(/\D/g, "");
-    
-    // Convert to decimal (divide by 100 to handle cents)
     const decimal = parseFloat(number) / 100;
-    
-    // Format as Brazilian Real
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL'
@@ -66,8 +61,22 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
   };
 
   const parseCurrencyToNumber = (value: string) => {
-    // Remove currency symbol, dots and convert comma to dot
     return Number(value.replace(/[R$\s.]/g, '').replace(',', '.'));
+  };
+
+  const navigateMonth = (direction: 'next' | 'previous') => {
+    const currentMonth = form.getValues('invoice_month');
+    const [year, month] = currentMonth.split('-').map(Number);
+    
+    let newDate = new Date(year, month - 1);
+    if (direction === 'next') {
+      newDate.setMonth(newDate.getMonth() + 1);
+    } else {
+      newDate.setMonth(newDate.getMonth() - 1);
+    }
+    
+    const newMonth = `${newDate.getFullYear()}-${String(newDate.getMonth() + 1).padStart(2, '0')}`;
+    form.setValue('invoice_month', newMonth);
   };
 
   const onSubmit = async (data: DebtFormValues) => {
@@ -170,9 +179,27 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Mês/Ano da Fatura</FormLabel>
-                  <FormControl>
-                    <Input type="month" {...field} />
-                  </FormControl>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => navigateMonth('previous')}
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    <FormControl>
+                      <Input type="month" {...field} className="text-center" />
+                    </FormControl>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      onClick={() => navigateMonth('next')}
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
                   <FormMessage />
                 </FormItem>
               )}
