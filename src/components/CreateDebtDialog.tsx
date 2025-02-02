@@ -65,7 +65,7 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
   };
 
   const navigateMonth = (direction: 'next' | 'previous') => {
-    const currentMonth = form.getValues('invoice_month');
+    const currentMonth = form.getValues('invoice_month') || new Date().toISOString().split('T')[0].substring(0, 7);
     const [year, month] = currentMonth.split('-').map(Number);
     
     let newDate = new Date(year, month - 1);
