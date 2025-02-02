@@ -58,7 +58,7 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
                 <ChevronLeft className="h-4 w-4" />
               </Button>
               <span className="font-medium">
-                {format(currentMonth, "MMMM'/'yyyy", { locale: ptBR })}
+                {format(currentMonth, "MMMM 'de' yyyy", { locale: ptBR })}
               </span>
               <Button variant="outline" size="icon" onClick={handleNextMonth}>
                 <ChevronRight className="h-4 w-4" />
@@ -100,7 +100,7 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
                   </TableCell>
                   <TableCell>
                     {debt.invoice_month ? 
-                      format(parseISO(debt.invoice_month), "MMMM'/'yyyy", { locale: ptBR }) : 
+                      format(parseISO(debt.invoice_month), "MMMM 'de' yyyy", { locale: ptBR }) : 
                       '-'
                     }
                   </TableCell>
