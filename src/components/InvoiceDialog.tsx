@@ -18,18 +18,16 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
   const [currentMonth, setCurrentMonth] = useState(new Date());
 
   const { data: invoiceDebts } = useQuery({
-    queryKey: ['invoice-debts', clientId, currentMonth],
+    queryKey: ['invoice-debts', clientId, format(currentMonth, 'yyyy-MM')],
     queryFn: async () => {
-      const startDate = startOfMonth(currentMonth);
-      const endDate = endOfMonth(currentMonth);
+      const monthStr = format(currentMonth, 'yyyy-MM');
       
       const { data, error } = await supabase
         .from('debts')
         .select('*')
         .eq('client_id', clientId)
-        .gte('invoice_month', startDate.toISOString())
-        .lte('invoice_month', endDate.toISOString())
-        .order('invoice_month', { ascending: true });
+        .like('invoice_month', `${monthStr}%`)
+        .order('transaction_date', { ascending: true });
 
       if (error) throw error;
       return data;
@@ -98,6 +96,13 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
                   </TableCell>
                 </TableRow>
               ))}
+              {(!invoiceDebts || invoiceDebts.length === 0) && (
+                <TableRow>
+                  <TableCell colSpan={4} className="text-center py-4">
+                    Nenhum débito encontrado para este mês
+                  </TableCell>
+                </TableRow>
+              )}
             </TableBody>
           </Table>
         </div>
