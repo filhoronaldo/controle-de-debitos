@@ -23,7 +23,7 @@ import { useToast } from "@/components/ui/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import InputMask from "input-mask-react";
+import { InputMask } from "input-mask-react";
 
 const formSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
