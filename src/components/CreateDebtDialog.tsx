@@ -25,7 +25,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { Textarea } from "@/components/ui/textarea";
 
 const debtFormSchema = z.object({
-  amount: z.string().min(1, "Valor é obrigatório").transform((val) => parseFloat(val)),
+  amount: z.coerce.number().min(0, "O valor deve ser maior que zero"),
   description: z.string().optional(),
   transaction_date: z.string().optional(),
 });
@@ -43,7 +43,7 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
   const form = useForm<DebtFormValues>({
     resolver: zodResolver(debtFormSchema),
     defaultValues: {
-      amount: "0",
+      amount: 0,
       description: "",
       transaction_date: new Date().toISOString().split('T')[0],
     },
@@ -106,6 +106,7 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
                       step="0.01"
                       placeholder="0.00"
                       {...field}
+                      onChange={(e) => field.onChange(Number(e.target.value))}
                     />
                   </FormControl>
                   <FormMessage />
