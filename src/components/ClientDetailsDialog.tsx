@@ -1,7 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
@@ -18,8 +17,6 @@ interface ClientDetailsDialogProps {
 export function ClientDetailsDialog({ clientId, clientName, open, onOpenChange }: ClientDetailsDialogProps) {
   const [isEditingPhone, setIsEditingPhone] = useState(false);
   const [newPhone, setNewPhone] = useState("");
-  const [showWhatsAppDialog, setShowWhatsAppDialog] = useState(false);
-  const [pendingWhatsAppStatus, setPendingWhatsAppStatus] = useState<boolean | null>(null);
   const queryClient = useQueryClient();
 
   const { data: client } = useQuery({
@@ -104,9 +101,6 @@ export function ClientDetailsDialog({ clientId, clientName, open, onOpenChange }
         description: `O WhatsApp foi ${newStatus ? 'ativado' : 'desativado'} para este cliente.`,
       });
 
-      // Reset states
-      setPendingWhatsAppStatus(null);
-      setShowWhatsAppDialog(false);
     } catch (error) {
       toast({
         variant: "destructive",
@@ -116,91 +110,54 @@ export function ClientDetailsDialog({ clientId, clientName, open, onOpenChange }
     }
   };
 
-  const startWhatsAppToggle = (newStatus: boolean) => {
-    setPendingWhatsAppStatus(newStatus);
-    setShowWhatsAppDialog(true);
-  };
-
   if (!client) return null;
 
   return (
-    <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Detalhes do Cliente - {clientName}</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 mt-4">
-            <div className="flex items-center justify-between">
-              <div className="space-y-1">
-                <div className="text-sm font-medium">Telefone</div>
-                {isEditingPhone ? (
-                  <div className="flex gap-2">
-                    <Input
-                      value={newPhone}
-                      onChange={(e) => setNewPhone(e.target.value)}
-                      placeholder="Novo telefone"
-                    />
-                    <Button onClick={handlePhoneEdit}>Salvar</Button>
-                    <Button variant="outline" onClick={() => setIsEditingPhone(false)}>
-                      Cancelar
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <Phone className="h-4 w-4" />
-                    <span>{client.phone || "Não cadastrado"}</span>
-                    <Button variant="ghost" size="sm" onClick={() => {
-                      setNewPhone(client.phone || "");
-                      setIsEditingPhone(true);
-                    }}>
-                      Editar
-                    </Button>
-                  </div>
-                )}
-              </div>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => startWhatsAppToggle(!client.is_whatsapp)}
-                className={client.is_whatsapp ? "text-green-500 hover:text-green-600" : "text-gray-400 hover:text-gray-500"}
-              >
-                <MessageSquare className="h-5 w-5" />
-              </Button>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>Detalhes do Cliente - {clientName}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 mt-4">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <div className="text-sm font-medium">Telefone</div>
+              {isEditingPhone ? (
+                <div className="flex gap-2">
+                  <Input
+                    value={newPhone}
+                    onChange={(e) => setNewPhone(e.target.value)}
+                    placeholder="Novo telefone"
+                  />
+                  <Button onClick={handlePhoneEdit}>Salvar</Button>
+                  <Button variant="outline" onClick={() => setIsEditingPhone(false)}>
+                    Cancelar
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Phone className="h-4 w-4" />
+                  <span>{client.phone || "Não cadastrado"}</span>
+                  <Button variant="ghost" size="sm" onClick={() => {
+                    setNewPhone(client.phone || "");
+                    setIsEditingPhone(true);
+                  }}>
+                    Editar
+                  </Button>
+                </div>
+              )}
             </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => handleWhatsAppToggle(!client.is_whatsapp)}
+              className={client.is_whatsapp ? "text-green-500 hover:text-green-600" : "text-gray-400 hover:text-gray-500"}
+            >
+              <MessageSquare className="h-5 w-5" />
+            </Button>
           </div>
-        </DialogContent>
-      </Dialog>
-
-      <AlertDialog open={showWhatsAppDialog} onOpenChange={setShowWhatsAppDialog}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>
-              {pendingWhatsAppStatus ? "Ativar WhatsApp" : "Desativar WhatsApp"}
-            </AlertDialogTitle>
-            <AlertDialogDescription>
-              {pendingWhatsAppStatus
-                ? "Deseja ativar o WhatsApp para este cliente?"
-                : "Deseja desativar o WhatsApp para este cliente?"}
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => {
-              setPendingWhatsAppStatus(null);
-              setShowWhatsAppDialog(false);
-            }}>
-              Cancelar
-            </AlertDialogCancel>
-            <AlertDialogAction onClick={() => {
-              if (pendingWhatsAppStatus !== null) {
-                handleWhatsAppToggle(pendingWhatsAppStatus);
-              }
-            }}>
-              Confirmar
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
