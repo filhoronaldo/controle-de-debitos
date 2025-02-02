@@ -20,15 +20,15 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
   const { data: invoiceDebts } = useQuery({
     queryKey: ['invoice-debts', clientId, format(currentMonth, 'yyyy-MM')],
     queryFn: async () => {
-      const startDate = startOfMonth(currentMonth);
-      const endDate = endOfMonth(currentMonth);
+      const startDate = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
+      const endDate = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
       
       const { data, error } = await supabase
         .from('debts')
         .select('*')
         .eq('client_id', clientId)
-        .filter('invoice_month', 'gte', startDate.toISOString().split('T')[0])
-        .filter('invoice_month', 'lte', endDate.toISOString().split('T')[0])
+        .gte('invoice_month', startDate)
+        .lte('invoice_month', endDate)
         .order('invoice_month', { ascending: true });
 
       if (error) throw error;
