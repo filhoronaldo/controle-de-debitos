@@ -1,22 +1,12 @@
+import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Table, TableBody, TableCell, TableRow } from "@/components/ui/table";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Input } from "@/components/ui/input";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { supabase } from "@/integrations/supabase/client";
-import { Button } from "./ui/button";
-import { MessageCircle, MessageCircleOff, Pencil } from "lucide-react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Input } from "./ui/input";
-import { useToast } from "./ui/use-toast";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { toast } from "@/components/ui/use-toast";
+import { Phone, WhatsappIcon } from "lucide-react";
 
 interface ClientDetailsDialogProps {
   clientId: string;
@@ -29,7 +19,7 @@ export function ClientDetailsDialog({ clientId, clientName, open, onOpenChange }
   const [isEditingPhone, setIsEditingPhone] = useState(false);
   const [newPhone, setNewPhone] = useState("");
   const [showWhatsAppDialog, setShowWhatsAppDialog] = useState(false);
-  const { toast } = useToast();
+  const [pendingWhatsAppStatus, setPendingWhatsAppStatus] = useState<boolean | null>(null);
   const queryClient = useQueryClient();
 
   const { data: client } = useQuery({
@@ -44,15 +34,10 @@ export function ClientDetailsDialog({ clientId, clientName, open, onOpenChange }
       if (error) throw error;
       return data;
     },
-    enabled: !!clientId && open,
+    enabled: open
   });
 
-  const handleEditPhone = () => {
-    setNewPhone(client?.phone || "");
-    setIsEditingPhone(true);
-  };
-
-  const handleSavePhone = async () => {
+  const handlePhoneEdit = async () => {
     try {
       const { error } = await supabase
         .from('clients')
@@ -61,26 +46,32 @@ export function ClientDetailsDialog({ clientId, clientName, open, onOpenChange }
 
       if (error) throw error;
 
+      // Update the cache immediately
+      queryClient.setQueryData(['client-details', clientId], (oldData: any) => ({
+        ...oldData,
+        phone: newPhone
+      }));
+
       toast({
         title: "Telefone atualizado",
         description: "O número de telefone foi atualizado com sucesso.",
       });
 
+      // Invalidate both queries to ensure data consistency
       queryClient.invalidateQueries({ queryKey: ['client-details', clientId] });
-      queryClient.invalidateQueries({ queryKey: ['clients'] }); // Also update the clients list
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
       setIsEditingPhone(false);
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Erro ao atualizar",
-        description: "Não foi possível atualizar o número de telefone.",
+        title: "Erro ao atualizar telefone",
+        description: "Ocorreu um erro ao atualizar o número de telefone.",
       });
     }
   };
 
-  const handleToggleWhatsApp = async () => {
+  const handleWhatsAppToggle = async (newStatus: boolean) => {
     try {
-      const newStatus = !client?.is_whatsapp;
       const { error } = await supabase
         .from('clients')
         .update({ is_whatsapp: newStatus })
@@ -94,90 +85,89 @@ export function ClientDetailsDialog({ clientId, clientName, open, onOpenChange }
         is_whatsapp: newStatus,
       }));
 
-      // Also invalidate the clients list query to update the main list
-      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      // Also update the clients list cache if it exists
+      queryClient.setQueryData(['clients'], (oldData: any) => {
+        if (!oldData) return oldData;
+        return oldData.map((client: any) => {
+          if (client.id === clientId) {
+            return {
+              ...client,
+              is_whatsapp: newStatus,
+            };
+          }
+          return client;
+        });
+      });
 
       toast({
         title: `WhatsApp ${newStatus ? 'ativado' : 'desativado'}`,
         description: `O WhatsApp foi ${newStatus ? 'ativado' : 'desativado'} para este cliente.`,
       });
 
+      // Reset states
+      setPendingWhatsAppStatus(null);
       setShowWhatsAppDialog(false);
     } catch (error) {
       toast({
         variant: "destructive",
-        title: "Erro ao atualizar",
-        description: "Não foi possível atualizar o status do WhatsApp.",
+        title: "Erro ao atualizar WhatsApp",
+        description: "Ocorreu um erro ao atualizar o status do WhatsApp.",
       });
     }
   };
 
+  const startWhatsAppToggle = (newStatus: boolean) => {
+    setPendingWhatsAppStatus(newStatus);
+    setShowWhatsAppDialog(true);
+  };
+
+  if (!client) return null;
+
   return (
     <>
       <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-md">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Detalhes do Cliente - {clientName}</DialogTitle>
           </DialogHeader>
-          <div className="mt-4">
-            <Table>
-              <TableBody>
-                <TableRow>
-                  <TableCell className="font-medium">Nome</TableCell>
-                  <TableCell>{client?.name}</TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="font-medium">Telefone</TableCell>
-                  <TableCell className="flex items-center gap-2">
-                    {isEditingPhone ? (
-                      <div className="flex items-center gap-2">
-                        <Input
-                          value={newPhone}
-                          onChange={(e) => setNewPhone(e.target.value)}
-                          placeholder="(00) 00000-0000"
-                          className="max-w-[200px]"
-                        />
-                        <Button size="sm" onClick={handleSavePhone}>Salvar</Button>
-                        <Button size="sm" variant="outline" onClick={() => setIsEditingPhone(false)}>
-                          Cancelar
-                        </Button>
-                      </div>
-                    ) : (
-                      <>
-                        {client?.phone || '-'}
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={handleEditPhone}
-                          className="h-8 w-8"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          size="icon"
-                          variant="ghost"
-                          onClick={() => setShowWhatsAppDialog(true)}
-                          className="h-8 w-8"
-                          title={client?.is_whatsapp ? "WhatsApp ativo" : "WhatsApp inativo"}
-                        >
-                          {client?.is_whatsapp ? (
-                            <MessageCircle className="h-4 w-4 text-green-500" />
-                          ) : (
-                            <MessageCircleOff className="h-4 w-4 text-gray-400" />
-                          )}
-                        </Button>
-                      </>
-                    )}
-                  </TableCell>
-                </TableRow>
-                <TableRow>
-                  <TableCell className="font-medium">Data de Cadastro</TableCell>
-                  <TableCell>
-                    {client?.created_at ? new Date(client.created_at).toLocaleDateString('pt-BR') : '-'}
-                  </TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
+          <div className="space-y-4 mt-4">
+            <div className="flex items-center justify-between">
+              <div className="space-y-1">
+                <div className="text-sm font-medium">Telefone</div>
+                {isEditingPhone ? (
+                  <div className="flex gap-2">
+                    <Input
+                      value={newPhone}
+                      onChange={(e) => setNewPhone(e.target.value)}
+                      placeholder="Novo telefone"
+                    />
+                    <Button onClick={handlePhoneEdit}>Salvar</Button>
+                    <Button variant="outline" onClick={() => setIsEditingPhone(false)}>
+                      Cancelar
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <Phone className="h-4 w-4" />
+                    <span>{client.phone || "Não cadastrado"}</span>
+                    <Button variant="ghost" size="sm" onClick={() => {
+                      setNewPhone(client.phone || "");
+                      setIsEditingPhone(true);
+                    }}>
+                      Editar
+                    </Button>
+                  </div>
+                )}
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => startWhatsAppToggle(!client.is_whatsapp)}
+                className={client.is_whatsapp ? "text-green-500 hover:text-green-600" : "text-gray-400 hover:text-gray-500"}
+              >
+                <WhatsappIcon className="h-5 w-5" />
+              </Button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -186,18 +176,27 @@ export function ClientDetailsDialog({ clientId, clientName, open, onOpenChange }
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>
-              {client?.is_whatsapp ? 'Desativar WhatsApp?' : 'Ativar WhatsApp?'}
+              {pendingWhatsAppStatus ? "Ativar WhatsApp" : "Desativar WhatsApp"}
             </AlertDialogTitle>
             <AlertDialogDescription>
-              {client?.is_whatsapp
-                ? 'Deseja desativar o WhatsApp para este cliente?'
-                : 'Deseja ativar o WhatsApp para este cliente?'}
+              {pendingWhatsAppStatus
+                ? "Deseja ativar o WhatsApp para este cliente?"
+                : "Deseja desativar o WhatsApp para este cliente?"}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleToggleWhatsApp}>
-              {client?.is_whatsapp ? 'Desativar' : 'Ativar'}
+            <AlertDialogCancel onClick={() => {
+              setPendingWhatsAppStatus(null);
+              setShowWhatsAppDialog(false);
+            }}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={() => {
+              if (pendingWhatsAppStatus !== null) {
+                handleWhatsAppToggle(pendingWhatsAppStatus);
+              }
+            }}>
+              Confirmar
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
