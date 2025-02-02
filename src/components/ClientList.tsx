@@ -1,9 +1,10 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, CheckCircle2, CreditCard, User } from "lucide-react";
+import { AlertCircle, CheckCircle2, CreditCard, History, User } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { CreateDebtDialog } from "./CreateDebtDialog";
+import { useNavigate } from "react-router-dom";
 
 interface Client {
   id: string;
@@ -13,6 +14,8 @@ interface Client {
 }
 
 export function ClientList() {
+  const navigate = useNavigate();
+  
   const { data: clients, isLoading } = useQuery({
     queryKey: ['clients'],
     queryFn: async () => {
@@ -49,6 +52,10 @@ export function ClientList() {
   if (isLoading) {
     return <div className="text-center p-4">Carregando...</div>;
   }
+
+  const handleViewHistory = (clientId: string) => {
+    navigate(`/client/${clientId}/history`);
+  };
 
   return (
     <div className="rounded-md border">
@@ -91,6 +98,14 @@ export function ClientList() {
                   <Button variant="outline" size="sm">
                     <User className="h-4 w-4 mr-1" />
                     Detalhes
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={() => handleViewHistory(client.id)}
+                  >
+                    <History className="h-4 w-4 mr-1" />
+                    Histórico
                   </Button>
                 </div>
               </TableCell>
