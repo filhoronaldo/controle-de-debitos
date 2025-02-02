@@ -38,14 +38,19 @@ export function CreateClientDialog() {
   const form = useForm<CreateClientForm>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      is_whatsapp: true
+      is_whatsapp: true,
+      name: "",
+      phone: "",
     }
   });
 
   const onSubmit = async (data: CreateClientForm) => {
     try {
-      // Changed from insert([data]) to insert(data) to match Supabase's expected type
-      const { error } = await supabase.from("clients").insert(data);
+      const { error } = await supabase.from("clients").insert({
+        name: data.name,
+        phone: data.phone,
+        is_whatsapp: data.is_whatsapp,
+      });
       
       if (error) throw error;
 
