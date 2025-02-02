@@ -107,7 +107,13 @@ export function CreatePaymentDialog({ debtId, amount, onPaymentComplete, trigger
 
     const updatePromises = monthDebts?.map(async (debt) => {
       const totalPaid = debt.payments?.reduce((sum: number, payment: any) => sum + Number(payment.amount), 0) || 0;
-      const status = totalPaid >= Number(debt.amount) ? 'paid' : 'pending';
+      let status = 'pending';
+      
+      if (totalPaid >= Number(debt.amount)) {
+        status = 'paid';
+      } else if (totalPaid > 0) {
+        status = 'partial';
+      }
 
       const { error: updateError } = await supabase
         .from('debts')
