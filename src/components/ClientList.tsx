@@ -1,6 +1,6 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, CheckCircle2, CreditCard, User } from "lucide-react";
+import { AlertCircle, CheckCircle2, CreditCard, PlusCircle, User } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -15,7 +15,6 @@ export function ClientList() {
   const { data: clients, isLoading } = useQuery({
     queryKey: ['clients'],
     queryFn: async () => {
-      // Fetch clients with their total debt and overdue status
       const { data, error } = await supabase
         .from('clients')
         .select(`
@@ -83,6 +82,10 @@ export function ClientList() {
               </TableCell>
               <TableCell>
                 <div className="flex gap-2">
+                  <Button variant="outline" size="sm">
+                    <PlusCircle className="h-4 w-4 mr-1" />
+                    Incluir Débito
+                  </Button>
                   <Button variant="outline" size="sm">
                     <CreditCard className="h-4 w-4 mr-1" />
                     Pagar
