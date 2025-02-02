@@ -21,17 +21,22 @@ import { UserPlus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
 
-interface CreateClientForm {
-  name: string;
-  phone?: string;
-  is_whatsapp?: boolean;
-}
+const formSchema = z.object({
+  name: z.string().min(1, "Nome é obrigatório"),
+  phone: z.string().min(1, "Telefone é obrigatório"),
+  is_whatsapp: z.boolean().default(true),
+});
+
+type CreateClientForm = z.infer<typeof formSchema>;
 
 export function CreateClientDialog() {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
   const form = useForm<CreateClientForm>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
       is_whatsapp: true
     }
