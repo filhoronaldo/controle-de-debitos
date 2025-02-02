@@ -126,6 +126,14 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
     return format(localDate, 'dd/MM/yyyy');
   };
 
+  const formatMonthYear = (dateString: string | null) => {
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    const timezoneOffset = date.getTimezoneOffset() * 60000;
+    const localDate = new Date(date.getTime() + timezoneOffset);
+    return format(localDate, "MMMM 'de' yyyy", { locale: ptBR });
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl">
@@ -217,10 +225,7 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
                     </div>
                   </TableCell>
                   <TableCell>
-                    {transaction.invoice_month ? 
-                      format(new Date(transaction.invoice_month), "MMMM 'de' yyyy", { locale: ptBR }) : 
-                      '-'
-                    }
+                    {formatMonthYear(transaction.invoice_month)}
                   </TableCell>
                 </TableRow>
               ))}
