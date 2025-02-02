@@ -88,48 +88,6 @@ export function CreatePaymentDialog({ debtId, amount, onPaymentComplete, trigger
     return numbers ? parseFloat(numbers) / 100 : 0;
   };
 
-  const updateDebtsStatus = async (invoiceMonth: string) => {
-    const { data: monthDebts, error: debtsError } = await supabase
-      .from('debts')
-      .select(`
-        id,
-        amount,
-        payments (
-          amount
-        )
-      `)
-      .eq('invoice_month', invoiceMonth);
-
-    if (debtsError) {
-      console.error('Error fetching month debts:', debtsError);
-      return;
-    }
-
-    const updatePromises = monthDebts?.map(async (debt) => {
-      const totalPaid = debt.payments?.reduce((sum: number, payment: any) => sum + Number(payment.amount), 0) || 0;
-      let status = 'pending';
-      
-      if (totalPaid >= Number(debt.amount)) {
-        status = 'paid';
-      } else if (totalPaid > 0) {
-        status = 'partial';
-      }
-
-      const { error: updateError } = await supabase
-        .from('debts')
-        .update({ status })
-        .eq('id', debt.id);
-
-      if (updateError) {
-        console.error('Error updating debt status:', updateError);
-      }
-    });
-
-    if (updatePromises) {
-      await Promise.all(updatePromises);
-    }
-  };
-
   const onSubmit = async (data: PaymentFormValues) => {
     try {
       const { error: paymentError } = await supabase
@@ -143,10 +101,6 @@ export function CreatePaymentDialog({ debtId, amount, onPaymentComplete, trigger
         });
 
       if (paymentError) throw paymentError;
-
-      if (invoiceMonth) {
-        await updateDebtsStatus(invoiceMonth);
-      }
 
       toast({
         title: "Pagamento registrado com sucesso!",

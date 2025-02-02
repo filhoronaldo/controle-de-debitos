@@ -50,7 +50,6 @@ export default function ClientHistory() {
               <TableHead>Data</TableHead>
               <TableHead>Descrição</TableHead>
               <TableHead>Valor</TableHead>
-              <TableHead>Status</TableHead>
               <TableHead>Mês Fatura</TableHead>
             </TableRow>
           </TableHeader>
@@ -62,11 +61,6 @@ export default function ClientHistory() {
                 </TableCell>
                 <TableCell>{transaction.description || '-'}</TableCell>
                 <TableCell>R$ {Number(transaction.amount).toFixed(2)}</TableCell>
-                <TableCell>
-                  <span className={transaction.status === 'pending' ? 'text-yellow-600' : 'text-green-600'}>
-                    {transaction.status === 'pending' ? 'Pendente' : 'Pago'}
-                  </span>
-                </TableCell>
                 <TableCell>
                   {transaction.invoice_month ? 
                     format(new Date(transaction.invoice_month), "MMMM/yyyy", { locale: ptBR }) : 
