@@ -20,10 +20,12 @@ import { Input } from "@/components/ui/input";
 import { UserPlus } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface CreateClientForm {
   name: string;
   phone?: string;
+  is_whatsapp?: boolean;
 }
 
 export function CreateClientDialog() {
@@ -85,11 +87,28 @@ export function CreateClientDialog() {
               name="phone"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>WhatsApp</FormLabel>
+                  <FormLabel>Telefone</FormLabel>
                   <FormControl>
                     <Input placeholder="(00) 00000-0000" {...field} />
                   </FormControl>
                   <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="is_whatsapp"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                  <FormControl>
+                    <Checkbox
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                  <div className="space-y-1 leading-none">
+                    <FormLabel>Este número é WhatsApp</FormLabel>
+                  </div>
                 </FormItem>
               )}
             />
