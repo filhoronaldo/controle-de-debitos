@@ -1,12 +1,13 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, CheckCircle2, CreditCard, History, User } from "lucide-react";
-import { useQuery } from "@tanstack/react-query";
+import { AlertCircle, CheckCircle2, CreditCard, History, Trash2, User } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { CreateDebtDialog } from "./CreateDebtDialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useState } from "react";
 import { format } from "date-fns";
+import { toast } from "sonner";
 
 interface Client {
   id: string;
@@ -27,6 +28,7 @@ interface Transaction {
 export function ClientList() {
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const queryClient = useQueryClient();
   
   const { data: clients, isLoading } = useQuery({
     queryKey: ['clients'],
@@ -76,9 +78,34 @@ export function ClientList() {
     }
   });
 
+  const deleteTransaction = useMutation({
+    mutationFn: async (transactionId: string) => {
+      const { error } = await supabase
+        .from('debts')
+        .delete()
+        .eq('id', transactionId);
+      
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success('Transação excluída com sucesso');
+      queryClient.invalidateQueries({ queryKey: ['transactions', selectedClient] });
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+    },
+    onError: () => {
+      toast.error('Erro ao excluir transação');
+    }
+  });
+
   const handleViewHistory = (clientId: string) => {
     setSelectedClient(clientId);
     setIsHistoryOpen(true);
+  };
+
+  const handleDeleteTransaction = (transactionId: string) => {
+    if (window.confirm('Tem certeza que deseja excluir esta transação?')) {
+      deleteTransaction.mutate(transactionId);
+    }
   };
 
   if (isLoading) {
@@ -160,6 +187,7 @@ export function ClientList() {
                   <TableHead>Valor</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Mês Referência</TableHead>
+                  <TableHead>Ações</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -193,6 +221,16 @@ export function ClientList() {
                         format(new Date(transaction.invoice_month), 'MM/yyyy') : 
                         '-'
                       }
+                    </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDeleteTransaction(transaction.id)}
+                        className="text-destructive hover:text-destructive/90"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
                     </TableCell>
                   </TableRow>
                 ))}
