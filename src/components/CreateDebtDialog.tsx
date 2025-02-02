@@ -153,7 +153,7 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
               name="transaction_date"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Data</FormLabel>
+                  <FormLabel>Data da Transação</FormLabel>
                   <FormControl>
                     <Input type="date" {...field} />
                   </FormControl>
