@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO, startOfMonth, endOfMonth, addMonths, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { CreatePaymentDialog } from "./CreatePaymentDialog";
 import { toast } from "sonner";
 
@@ -81,6 +81,13 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
     }
   });
 
+  // Add effect to refetch when dialog opens
+  useEffect(() => {
+    if (open) {
+      refetch();
+    }
+  }, [open, refetch]);
+
   const calculateTotals = () => {
     if (!invoiceData) return { totalAmount: 0, totalPaid: 0, pendingAmount: 0 };
 
@@ -118,9 +125,7 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
   const firstPendingDebtId = invoiceData?.find(t => t.type === 'debt' && t.status === 'pending')?.id || null;
 
   const formatDate = (dateString: string) => {
-    // Create a new Date object from the ISO string
     const date = new Date(dateString);
-    // Add the timezone offset to get the correct local date
     const timezoneOffset = date.getTimezoneOffset() * 60000;
     const localDate = new Date(date.getTime() + timezoneOffset);
     return format(localDate, 'dd/MM/yyyy');
@@ -133,6 +138,8 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
     const localDate = new Date(date.getTime() + timezoneOffset);
     return format(localDate, "MMMM 'de' yyyy", { locale: ptBR });
   };
+
+  // ... keep existing code (rest of the component JSX)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
