@@ -40,10 +40,6 @@ export function ClientDetailsDialog({ clientId, clientName, open, onOpenChange }
                 <TableCell>{client?.name}</TableCell>
               </TableRow>
               <TableRow>
-                <TableCell className="font-medium">Email</TableCell>
-                <TableCell>{client?.email || '-'}</TableCell>
-              </TableRow>
-              <TableRow>
                 <TableCell className="font-medium">Telefone</TableCell>
                 <TableCell>{client?.phone || '-'}</TableCell>
               </TableRow>
