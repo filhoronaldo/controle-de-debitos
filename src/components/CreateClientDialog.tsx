@@ -44,7 +44,8 @@ export function CreateClientDialog() {
 
   const onSubmit = async (data: CreateClientForm) => {
     try {
-      const { error } = await supabase.from("clients").insert([data]);
+      // Changed from insert([data]) to insert(data) to match Supabase's expected type
+      const { error } = await supabase.from("clients").insert(data);
       
       if (error) throw error;
 
