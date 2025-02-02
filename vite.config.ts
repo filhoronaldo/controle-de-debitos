@@ -9,8 +9,9 @@ export default defineConfig(({ mode }) => ({
     host: "::",
     port: 8080,
     hmr: {
-      // Disable WebSocket connection and fallback to polling
-      protocol: 'ws',
+      protocol: 'wss', // Use secure WebSocket
+      host: 'localhost',
+      port: 443,
       clientPort: 443,
     },
   },
