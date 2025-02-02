@@ -1,21 +1,55 @@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { CreditCard, DollarSign, User } from "lucide-react";
+import { AlertCircle, CheckCircle2, CreditCard, User } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Client {
-  id: number;
+  id: string;
   name: string;
-  debt: number;
-  lastPayment: string;
+  total_debt: number;
+  is_overdue: boolean;
 }
 
-const mockClients: Client[] = [
-  { id: 1, name: "João Silva", debt: 1500, lastPayment: "2024-03-15" },
-  { id: 2, name: "Maria Santos", debt: 750, lastPayment: "2024-03-20" },
-  { id: 3, name: "Pedro Oliveira", debt: 2200, lastPayment: "2024-03-10" },
-];
-
 export function ClientList() {
+  const { data: clients, isLoading } = useQuery({
+    queryKey: ['clients'],
+    queryFn: async () => {
+      // Fetch clients with their total debt and overdue status
+      const { data, error } = await supabase
+        .from('clients')
+        .select(`
+          id,
+          name,
+          debts (
+            amount,
+            due_date,
+            status
+          )
+        `);
+
+      if (error) throw error;
+
+      return data.map((client: any) => {
+        const totalDebt = client.debts.reduce((sum: number, debt: any) => sum + Number(debt.amount), 0);
+        const hasOverdueBills = client.debts.some((debt: any) => {
+          return debt.due_date && new Date(debt.due_date) < new Date() && debt.status === 'pending';
+        });
+
+        return {
+          id: client.id,
+          name: client.name,
+          total_debt: totalDebt,
+          is_overdue: hasOverdueBills
+        };
+      });
+    }
+  });
+
+  if (isLoading) {
+    return <div className="text-center p-4">Carregando...</div>;
+  }
+
   return (
     <div className="rounded-md border">
       <Table>
@@ -23,16 +57,30 @@ export function ClientList() {
           <TableRow>
             <TableHead>Cliente</TableHead>
             <TableHead>Débito Total</TableHead>
-            <TableHead>Último Pagamento</TableHead>
+            <TableHead>Situação</TableHead>
             <TableHead>Ações</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
-          {mockClients.map((client) => (
+          {clients?.map((client) => (
             <TableRow key={client.id} className="hover:bg-muted/50">
               <TableCell className="font-medium">{client.name}</TableCell>
-              <TableCell>R$ {client.debt.toFixed(2)}</TableCell>
-              <TableCell>{new Date(client.lastPayment).toLocaleDateString()}</TableCell>
+              <TableCell>R$ {client.total_debt.toFixed(2)}</TableCell>
+              <TableCell>
+                <div className="flex items-center gap-2">
+                  {client.is_overdue ? (
+                    <>
+                      <AlertCircle className="h-4 w-4 text-destructive" />
+                      <span className="text-destructive">Atrasado</span>
+                    </>
+                  ) : (
+                    <>
+                      <CheckCircle2 className="h-4 w-4 text-green-500" />
+                      <span className="text-green-500">Em dia</span>
+                    </>
+                  )}
+                </div>
+              </TableCell>
               <TableCell>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm">
