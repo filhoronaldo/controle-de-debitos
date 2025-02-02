@@ -151,7 +151,7 @@ export function ClientList() {
                     <CreateDebtDialog clientId={client.id} clientName={client.name} />
                     <Button variant="outline" size="sm">
                       <CreditCard className="h-4 w-4 mr-1" />
-                      Pagar
+                      Faturas
                     </Button>
                     <Button variant="outline" size="sm">
                       <User className="h-4 w-4 mr-1" />
