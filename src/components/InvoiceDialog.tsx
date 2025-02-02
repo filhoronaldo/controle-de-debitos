@@ -80,6 +80,7 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
                 <TableHead>Descrição</TableHead>
                 <TableHead>Valor</TableHead>
                 <TableHead>Status</TableHead>
+                <TableHead>Mês Referência</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -96,11 +97,17 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
                   <TableCell>
                     {debt.status === 'pending' ? 'Pendente' : 'Pago'}
                   </TableCell>
+                  <TableCell>
+                    {debt.invoice_month ? 
+                      format(parseISO(debt.invoice_month), 'MM/yyyy') : 
+                      '-'
+                    }
+                  </TableCell>
                 </TableRow>
               ))}
               {(!invoiceDebts || invoiceDebts.length === 0) && (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center py-4">
+                  <TableCell colSpan={5} className="text-center py-4">
                     Nenhum débito encontrado para este mês
                   </TableCell>
                 </TableRow>
