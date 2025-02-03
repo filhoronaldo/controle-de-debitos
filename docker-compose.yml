@@ -7,7 +7,7 @@ services:
     volumes:
       - .:/app
     ports:
-      - "8080:3000"
+      - "8081:3000"
     command: sh -c "npm install && npm run dev"
     restart: always
 
