@@ -308,7 +308,10 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
         </DialogContent>
       </Dialog>
 
-      <AlertDialog open={!!paymentToDelete} onOpenChange={(open) => !open && setPaymentToDelete(null)}>
+      <AlertDialog 
+        open={!!paymentToDelete} 
+        onOpenChange={(isOpen) => !isOpen && setPaymentToDelete(null)}
+      >
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
@@ -319,7 +322,10 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDeletePayment} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+            <AlertDialogAction 
+              onClick={handleDeletePayment}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
               Excluir
             </AlertDialogAction>
           </AlertDialogFooter>
