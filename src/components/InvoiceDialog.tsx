@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Trash2, Check, X } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO, startOfMonth, endOfMonth, addMonths, subMonths, setDate, isBefore } from "date-fns";
@@ -299,33 +299,33 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
                           </Button>
                         </PopoverTrigger>
                         <PopoverContent 
-                          className="w-80" 
+                          className="w-fit p-2" 
                           side="left"
                           align="center"
                         >
-                          <div className="space-y-4">
-                            <p className="text-sm font-medium">
-                              Tem certeza que deseja excluir o pagamento de R$ {transaction.type === 'payment' && Math.abs(Number(transaction.amount)).toFixed(2)}?
-                            </p>
-                            <div className="flex justify-end gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => {
-                                  setIsDeletePopoverOpen(false);
-                                  setPaymentToDelete(null);
-                                }}
-                              >
-                                Cancelar
-                              </Button>
-                              <Button
-                                variant="destructive"
-                                size="sm"
-                                onClick={handleDeletePayment}
-                              >
-                                Excluir
-                              </Button>
-                            </div>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium">Confirma?</span>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={handleDeletePayment}
+                              className="text-success hover:text-success hover:bg-success/10"
+                            >
+                              <Check className="h-4 w-4" />
+                              <span>SIM</span>
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setIsDeletePopoverOpen(false);
+                                setPaymentToDelete(null);
+                              }}
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                            >
+                              <X className="h-4 w-4" />
+                              <span>NÃO</span>
+                            </Button>
                           </div>
                         </PopoverContent>
                       </Popover>
