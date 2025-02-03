@@ -10,16 +10,7 @@ import { useState, useEffect } from "react";
 import { CreatePaymentDialog } from "./CreatePaymentDialog";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 interface InvoiceDialogProps {
   clientId: string;
@@ -31,7 +22,7 @@ interface InvoiceDialogProps {
 export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: InvoiceDialogProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [paymentToDelete, setPaymentToDelete] = useState<{ id: string; amount: number } | null>(null);
-  const [isAlertOpen, setIsAlertOpen] = useState(false);
+  const [isDeletePopoverOpen, setIsDeletePopoverOpen] = useState(false);
 
   const { data: invoiceData, refetch } = useQuery({
     queryKey: ['invoice-debts', clientId, format(currentMonth, 'yyyy-MM')],
@@ -176,7 +167,7 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
       console.error('Error deleting payment:', error);
       toast.error('Erro ao excluir pagamento');
     } finally {
-      setIsAlertOpen(false);
+      setIsDeletePopoverOpen(false);
       setPaymentToDelete(null);
     }
   };
@@ -199,150 +190,160 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
   };
 
   return (
-    <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <div className="flex items-center justify-between">
-              <DialogTitle>Fatura - {clientName}</DialogTitle>
-              <div className="flex items-center gap-2">
-                <Button variant="outline" size="icon" onClick={handlePreviousMonth}>
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                <span className="font-medium">
-                  {format(currentMonth, "MMMM 'de' yyyy", { locale: ptBR })}
-                </span>
-                <Button variant="outline" size="icon" onClick={handleNextMonth}>
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-3xl">
+        <DialogHeader>
+          <div className="flex items-center justify-between">
+            <DialogTitle>Fatura - {clientName}</DialogTitle>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="icon" onClick={handlePreviousMonth}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="font-medium">
+                {format(currentMonth, "MMMM 'de' yyyy", { locale: ptBR })}
+              </span>
+              <Button variant="outline" size="icon" onClick={handleNextMonth}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
             </div>
-          </DialogHeader>
-
-          <div className="mt-6">
-            <div className="mb-4 flex justify-between items-center">
-              <div className="space-y-1">
-                <div className="flex items-center gap-2 mb-2">
-                  <Badge variant={getInvoiceStatus().variant}>
-                    {getInvoiceStatus().label}
-                  </Badge>
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  Total Pendente: <span className="font-medium text-foreground">R$ {pendingAmount.toFixed(2)}</span>
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  Total do Mês: <span className="font-medium text-foreground">R$ {totalAmount.toFixed(2)}</span>
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  Total Pago: <span className="font-medium text-success">R$ {totalPaid.toFixed(2)}</span>
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  Vencimento: <span className="font-medium text-foreground">{getDueDate()}</span>
-                </div>
-              </div>
-              {firstPendingDebtId && (
-                <CreatePaymentDialog 
-                  debtId={firstPendingDebtId} 
-                  amount={pendingAmount}
-                  onPaymentComplete={handlePaymentComplete}
-                  trigger={
-                    <Button>
-                      <Plus className="h-4 w-4 mr-2" />
-                      Registrar Pagamento
-                    </Button>
-                  }
-                />
-              )}
-            </div>
-
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Descrição</TableHead>
-                  <TableHead>Valor</TableHead>
-                  <TableHead>Mês Referência</TableHead>
-                  <TableHead className="w-[100px]">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {invoiceData?.transactions?.map((transaction) => (
-                  <TableRow 
-                    key={transaction.id}
-                    className={transaction.type === 'payment' ? 'bg-muted/30' : ''}
-                  >
-                    <TableCell>
-                      {formatDate(transaction.date)}
-                    </TableCell>
-                    <TableCell>{transaction.description}</TableCell>
-                    <TableCell className={transaction.type === 'payment' ? 'text-success' : ''}>
-                      R$ {Math.abs(Number(transaction.amount)).toFixed(2)}
-                      {transaction.type === 'payment' && transaction.payment_method && 
-                        ` (${transaction.payment_method})`}
-                    </TableCell>
-                    <TableCell>
-                      {formatMonthYear(transaction.invoice_month)}
-                    </TableCell>
-                    <TableCell>
-                      {transaction.type === 'payment' && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            setPaymentToDelete({ id: transaction.id, amount: Math.abs(Number(transaction.amount)) });
-                            setIsAlertOpen(true);
-                          }}
-                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {(!invoiceData?.transactions || invoiceData.transactions.length === 0) && (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center py-4">
-                      Nenhuma transação encontrada para este mês
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
           </div>
-        </DialogContent>
-      </Dialog>
+        </DialogHeader>
 
-      <AlertDialog 
-        open={isAlertOpen}
-        onOpenChange={(open) => {
-          setIsAlertOpen(open);
-          if (!open) {
-            setPaymentToDelete(null);
-          }
-        }}
-      >
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar exclusão</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja excluir o pagamento de R$ {paymentToDelete?.amount.toFixed(2)}?
-              Esta ação não pode ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>
-              Cancelar
-            </AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleDeletePayment}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
-    </>
+        <div className="mt-6">
+          <div className="mb-4 flex justify-between items-center">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2 mb-2">
+                <Badge variant={getInvoiceStatus().variant}>
+                  {getInvoiceStatus().label}
+                </Badge>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                Total Pendente: <span className="font-medium text-foreground">R$ {pendingAmount.toFixed(2)}</span>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                Total do Mês: <span className="font-medium text-foreground">R$ {totalAmount.toFixed(2)}</span>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                Total Pago: <span className="font-medium text-success">R$ {totalPaid.toFixed(2)}</span>
+              </div>
+              <div className="text-sm text-muted-foreground">
+                Vencimento: <span className="font-medium text-foreground">{getDueDate()}</span>
+              </div>
+            </div>
+            {firstPendingDebtId && (
+              <CreatePaymentDialog 
+                debtId={firstPendingDebtId} 
+                amount={pendingAmount}
+                onPaymentComplete={handlePaymentComplete}
+                trigger={
+                  <Button>
+                    <Plus className="h-4 w-4 mr-2" />
+                    Registrar Pagamento
+                  </Button>
+                }
+              />
+            )}
+          </div>
+
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Data</TableHead>
+                <TableHead>Descrição</TableHead>
+                <TableHead>Valor</TableHead>
+                <TableHead>Mês Referência</TableHead>
+                <TableHead className="w-[100px]">Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {invoiceData?.transactions?.map((transaction) => (
+                <TableRow 
+                  key={transaction.id}
+                  className={transaction.type === 'payment' ? 'bg-muted/30' : ''}
+                >
+                  <TableCell>{formatDate(transaction.date)}</TableCell>
+                  <TableCell>{transaction.description}</TableCell>
+                  <TableCell className={transaction.type === 'payment' ? 'text-success' : ''}>
+                    R$ {Math.abs(Number(transaction.amount)).toFixed(2)}
+                    {transaction.type === 'payment' && transaction.payment_method && 
+                      ` (${transaction.payment_method})`}
+                  </TableCell>
+                  <TableCell>
+                    {formatMonthYear(transaction.invoice_month)}
+                  </TableCell>
+                  <TableCell>
+                    {transaction.type === 'payment' && (
+                      <Popover 
+                        open={isDeletePopoverOpen && paymentToDelete?.id === transaction.id}
+                        onOpenChange={(open) => {
+                          setIsDeletePopoverOpen(open);
+                          if (!open) {
+                            setPaymentToDelete(null);
+                          }
+                        }}
+                      >
+                        <PopoverTrigger asChild>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setPaymentToDelete({ 
+                                id: transaction.id, 
+                                amount: Math.abs(Number(transaction.amount)) 
+                              });
+                              setIsDeletePopoverOpen(true);
+                            }}
+                            className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </PopoverTrigger>
+                        <PopoverContent 
+                          className="w-80" 
+                          side="left"
+                          align="center"
+                        >
+                          <div className="space-y-4">
+                            <p className="text-sm font-medium">
+                              Tem certeza que deseja excluir o pagamento de R$ {transaction.type === 'payment' && Math.abs(Number(transaction.amount)).toFixed(2)}?
+                            </p>
+                            <div className="flex justify-end gap-2">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setIsDeletePopoverOpen(false);
+                                  setPaymentToDelete(null);
+                                }}
+                              >
+                                Cancelar
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={handleDeletePayment}
+                              >
+                                Excluir
+                              </Button>
+                            </div>
+                          </div>
+                        </PopoverContent>
+                      </Popover>
+                    )}
+                  </TableCell>
+                </TableRow>
+              ))}
+              {(!invoiceData?.transactions || invoiceData.transactions.length === 0) && (
+                <TableRow>
+                  <TableCell colSpan={5} className="text-center py-4">
+                    Nenhuma transação encontrada para este mês
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
