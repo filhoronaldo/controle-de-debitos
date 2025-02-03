@@ -129,7 +129,7 @@ export function InvoiceDialog({
             <CreatePaymentDialog 
               debtId={clientId} 
               amount={0}
-              onPaymentComplete={refetchInvoiceData} 
+              onPaymentComplete={refetchInvoiceData}
             />
           </div>
 
