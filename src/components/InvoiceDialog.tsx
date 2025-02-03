@@ -4,11 +4,12 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format, parseISO, startOfMonth, endOfMonth, addMonths, subMonths, setDate } from "date-fns";
+import { format, parseISO, startOfMonth, endOfMonth, addMonths, subMonths, setDate, isBefore } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useState, useEffect } from "react";
 import { CreatePaymentDialog } from "./CreatePaymentDialog";
 import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 
 interface InvoiceDialogProps {
   clientId: string;
@@ -108,6 +109,23 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
     };
   };
 
+  const getInvoiceStatus = () => {
+    const { totalAmount, totalPaid } = calculateTotals();
+    const dueDate = getDueDate();
+    const isPastDue = dueDate ? isBefore(new Date(dueDate), new Date()) : false;
+
+    if (totalPaid >= totalAmount) {
+      return { label: "Paga", variant: "success" as const };
+    }
+    if (isPastDue) {
+      if (totalPaid > 0) {
+        return { label: "Vencida - Parcial", variant: "warning" as const };
+      }
+      return { label: "Vencida", variant: "destructive" as const };
+    }
+    return { label: "Aberta", variant: "default" as const };
+  };
+
   const { totalAmount, totalPaid, pendingAmount } = calculateTotals();
 
   const handlePreviousMonth = () => {
@@ -169,6 +187,11 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
         <div className="mt-6">
           <div className="mb-4 flex justify-between items-center">
             <div className="space-y-1">
+              <div className="flex items-center gap-2 mb-2">
+                <Badge variant={getInvoiceStatus().variant}>
+                  {getInvoiceStatus().label}
+                </Badge>
+              </div>
               <div className="text-sm text-muted-foreground">
                 Total Pendente: <span className="font-medium text-foreground">R$ {pendingAmount.toFixed(2)}</span>
               </div>
