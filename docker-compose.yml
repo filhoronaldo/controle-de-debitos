@@ -13,11 +13,12 @@ services:
       - MeuSabia
 
     labels:
-      - traefik.enable=1
-      - traefik.http.routers.lovable-app.rule=Host(`lovable.meusabia.com`)
-      - traefik.http.routers.lovable-app.entrypoints=websecure
-      - traefik.http.routers.lovable-app.tls.certresolver=letsencryptresolver
-      - traefik.http.services.lovable-app.loadbalancer.server.port=3000
+      - "traefik.enable=true"
+      - "traefik.http.routers.lovable-app.rule=Host(`lovable.meusabia.com`)"
+      - "traefik.http.routers.lovable-app.entrypoints=websecure"
+      - "traefik.http.routers.lovable-app.tls=true"
+      - "traefik.http.routers.lovable-app.tls.certresolver=letsencryptresolver"
+      - "traefik.http.services.lovable-app.loadbalancer.server.port=3000"
 
 networks:
   MeuSabia:
