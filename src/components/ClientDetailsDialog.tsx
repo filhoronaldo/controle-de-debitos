@@ -5,7 +5,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Phone, MessageSquare, User } from "lucide-react";
+import { Phone, MessageSquare, User, Calendar } from "lucide-react";
 
 interface ClientDetailsDialogProps {
   clientId: string;
@@ -17,8 +17,10 @@ interface ClientDetailsDialogProps {
 export function ClientDetailsDialog({ clientId, clientName, open, onOpenChange }: ClientDetailsDialogProps) {
   const [isEditingPhone, setIsEditingPhone] = useState(false);
   const [isEditingName, setIsEditingName] = useState(false);
+  const [isEditingInvoiceDay, setIsEditingInvoiceDay] = useState(false);
   const [newPhone, setNewPhone] = useState("");
   const [newName, setNewName] = useState("");
+  const [newInvoiceDay, setNewInvoiceDay] = useState<number>(1);
   const queryClient = useQueryClient();
 
   const { data: client } = useQuery({
@@ -97,6 +99,35 @@ export function ClientDetailsDialog({ clientId, clientName, open, onOpenChange }
       setIsEditingPhone(false);
     } catch (error) {
       toast.error("Erro ao atualizar telefone");
+    }
+  };
+
+  const handleInvoiceDayEdit = async () => {
+    if (newInvoiceDay < 1 || newInvoiceDay > 28) {
+      toast.error("O dia da fatura deve estar entre 1 e 28");
+      return;
+    }
+
+    try {
+      const { error } = await supabase
+        .from('clients')
+        .update({ invoice_day: newInvoiceDay })
+        .eq('id', clientId);
+
+      if (error) throw error;
+
+      queryClient.setQueryData(['client-details', clientId], (oldData: any) => ({
+        ...oldData,
+        invoice_day: newInvoiceDay
+      }));
+
+      toast.success("Dia da fatura atualizado com sucesso");
+
+      queryClient.invalidateQueries({ queryKey: ['client-details', clientId] });
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      setIsEditingInvoiceDay(false);
+    } catch (error) {
+      toast.error("Erro ao atualizar dia da fatura");
     }
   };
 
@@ -210,6 +241,37 @@ export function ClientDetailsDialog({ clientId, clientName, open, onOpenChange }
                     {client.is_whatsapp ? "Tem WhatsApp" : "Não tem WhatsApp"}
                   </span>
                 </div>
+              </div>
+            )}
+          </div>
+
+          <div className="space-y-1">
+            <div className="text-sm font-medium">Dia da Fatura</div>
+            {isEditingInvoiceDay ? (
+              <div className="flex gap-2">
+                <Input
+                  type="number"
+                  min={1}
+                  max={28}
+                  value={newInvoiceDay}
+                  onChange={(e) => setNewInvoiceDay(parseInt(e.target.value))}
+                  placeholder="Dia da fatura (1-28)"
+                />
+                <Button onClick={handleInvoiceDayEdit}>Salvar</Button>
+                <Button variant="outline" onClick={() => setIsEditingInvoiceDay(false)}>
+                  Cancelar
+                </Button>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                <span>Dia {client.invoice_day || 1}</span>
+                <Button variant="ghost" size="sm" onClick={() => {
+                  setNewInvoiceDay(client.invoice_day || 1);
+                  setIsEditingInvoiceDay(true);
+                }}>
+                  Editar
+                </Button>
               </div>
             )}
           </div>
