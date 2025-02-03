@@ -261,11 +261,10 @@ export function ClientList() {
       {selectedClient && (
         <>
           <InvoiceDialog
-            isOpen={isInvoiceOpen}
-            onClose={() => setIsInvoiceOpen(false)}
             clientId={selectedClient}
             clientName={selectedClientName}
-            month={new Date()}
+            open={isInvoiceOpen}
+            onOpenChange={setIsInvoiceOpen}
           />
           <ClientDetailsDialog
             clientId={selectedClient}
