@@ -54,7 +54,6 @@ export function InvoiceDialog({
       const startOfMonth = new Date(month.getFullYear(), month.getMonth(), 1);
       const endOfMonth = new Date(month.getFullYear(), month.getMonth() + 1, 0);
 
-      // Fetch debts for the client in the specified month
       const { data: debtsData, error: debtsError } = await supabase
         .from("debts")
         .select("*")
@@ -127,7 +126,11 @@ export function InvoiceDialog({
         <div className="mt-4">
           <div className="flex justify-between items-center mb-4">
             <h3 className="text-lg font-semibold">Transações</h3>
-            <CreatePaymentDialog debtId={clientId} onSuccess={refetchInvoiceData} />
+            <CreatePaymentDialog 
+              debtId={clientId} 
+              amount={0}
+              onPaymentComplete={refetchInvoiceData} 
+            />
           </div>
 
           {isLoading ? (

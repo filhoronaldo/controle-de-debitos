@@ -48,7 +48,7 @@ export function CreatePaymentDialog({ debtId, amount, onPaymentComplete, trigger
         .from('debts')
         .select('invoice_month')
         .eq('id', debtId)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Error fetching debt details:', error);
