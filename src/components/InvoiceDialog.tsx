@@ -109,17 +109,23 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
     };
   };
 
+  const getDueDate = () => {
+    if (!invoiceData?.invoiceDay) return null;
+    const dueDate = setDate(currentMonth, invoiceData.invoiceDay);
+    return format(dueDate, "dd/MM/yyyy", { locale: ptBR });
+  };
+
   const getInvoiceStatus = () => {
     const { totalAmount, totalPaid } = calculateTotals();
     const dueDate = getDueDate();
-    const isPastDue = dueDate ? isBefore(new Date(dueDate), new Date()) : false;
+    const isPastDue = dueDate ? isBefore(new Date(parseISO(format(setDate(currentMonth, invoiceData?.invoiceDay || 1), 'yyyy-MM-dd'))), new Date()) : false;
 
     if (totalPaid >= totalAmount) {
-      return { label: "Paga", variant: "success" as const };
+      return { label: "Paga", variant: "outline" as const };
     }
     if (isPastDue) {
       if (totalPaid > 0) {
-        return { label: "Vencida - Parcial", variant: "warning" as const };
+        return { label: "Vencida - Parcial", variant: "destructive" as const };
       }
       return { label: "Vencida", variant: "destructive" as const };
     }
@@ -156,12 +162,6 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
     const timezoneOffset = date.getTimezoneOffset() * 60000;
     const localDate = new Date(date.getTime() + timezoneOffset);
     return format(localDate, "MMMM 'de' yyyy", { locale: ptBR });
-  };
-
-  const getDueDate = () => {
-    if (!invoiceData?.invoiceDay) return null;
-    const dueDate = setDate(currentMonth, invoiceData.invoiceDay);
-    return format(dueDate, "dd/MM/yyyy", { locale: ptBR });
   };
 
   return (
