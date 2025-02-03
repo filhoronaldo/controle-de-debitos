@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format, parseISO, startOfMonth, endOfMonth, addMonths, subMonths } from "date-fns";
+import { format, parseISO, startOfMonth, endOfMonth, addMonths, subMonths, setDate } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useState, useEffect } from "react";
 import { CreatePaymentDialog } from "./CreatePaymentDialog";
@@ -26,6 +26,12 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
       const startDate = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
       const endDate = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
       
+      const { data: client } = await supabase
+        .from('clients')
+        .select('invoice_day')
+        .eq('id', clientId)
+        .single();
+
       const { data: debts, error: debtsError } = await supabase
         .from('debts')
         .select(`
@@ -69,9 +75,12 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
         return acc;
       }, []);
 
-      return transactions.sort((a: any, b: any) => 
-        new Date(a.date).getTime() - new Date(b.date).getTime()
-      );
+      return {
+        invoiceDay: client?.invoice_day || 1,
+        transactions: transactions.sort((a: any, b: any) => 
+          new Date(a.date).getTime() - new Date(b.date).getTime()
+        )
+      };
     }
   });
 
@@ -82,9 +91,9 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
   }, [open, refetch]);
 
   const calculateTotals = () => {
-    if (!invoiceData) return { totalAmount: 0, totalPaid: 0, pendingAmount: 0 };
+    if (!invoiceData?.transactions) return { totalAmount: 0, totalPaid: 0, pendingAmount: 0 };
 
-    const totals = invoiceData.reduce((acc, transaction) => {
+    const totals = invoiceData.transactions.reduce((acc, transaction) => {
       if (transaction.type === 'debt') {
         acc.totalAmount += Number(transaction.amount);
       } else if (transaction.type === 'payment') {
@@ -114,7 +123,7 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
     toast.success('Pagamento registrado com sucesso!');
   };
 
-  const firstPendingDebtId = invoiceData?.find(t => t.type === 'debt')?.id || null;
+  const firstPendingDebtId = invoiceData?.transactions?.find(t => t.type === 'debt')?.id || null;
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -129,6 +138,12 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
     const timezoneOffset = date.getTimezoneOffset() * 60000;
     const localDate = new Date(date.getTime() + timezoneOffset);
     return format(localDate, "MMMM 'de' yyyy", { locale: ptBR });
+  };
+
+  const getDueDate = () => {
+    if (!invoiceData?.invoiceDay) return null;
+    const dueDate = setDate(currentMonth, invoiceData.invoiceDay);
+    return format(dueDate, "dd/MM/yyyy", { locale: ptBR });
   };
 
   return (
@@ -163,6 +178,9 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
               <div className="text-sm text-muted-foreground">
                 Total Pago: <span className="font-medium text-success">R$ {totalPaid.toFixed(2)}</span>
               </div>
+              <div className="text-sm text-muted-foreground">
+                Vencimento: <span className="font-medium text-foreground">{getDueDate()}</span>
+              </div>
             </div>
             {firstPendingDebtId && (
               <CreatePaymentDialog 
@@ -189,7 +207,7 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
               </TableRow>
             </TableHeader>
             <TableBody>
-              {invoiceData?.map((transaction) => (
+              {invoiceData?.transactions?.map((transaction) => (
                 <TableRow 
                   key={transaction.id}
                   className={transaction.type === 'payment' ? 'bg-muted/30' : ''}
@@ -208,7 +226,7 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
                   </TableCell>
                 </TableRow>
               ))}
-              {(!invoiceData || invoiceData.length === 0) && (
+              {(!invoiceData?.transactions || invoiceData.transactions.length === 0) && (
                 <TableRow>
                   <TableCell colSpan={4} className="text-center py-4">
                     Nenhuma transação encontrada para este mês
