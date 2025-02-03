@@ -176,8 +176,8 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
       console.error('Error deleting payment:', error);
       toast.error('Erro ao excluir pagamento');
     } finally {
-      setPaymentToDelete(null);
       setIsAlertOpen(false);
+      setPaymentToDelete(null);
     }
   };
 
@@ -314,8 +314,13 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
       </Dialog>
 
       <AlertDialog 
-        open={isAlertOpen} 
-        onOpenChange={setIsAlertOpen}
+        open={isAlertOpen}
+        onOpenChange={(open) => {
+          setIsAlertOpen(open);
+          if (!open) {
+            setPaymentToDelete(null);
+          }
+        }}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -326,10 +331,7 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => {
-              setIsAlertOpen(false);
-              setPaymentToDelete(null);
-            }}>
+            <AlertDialogCancel>
               Cancelar
             </AlertDialogCancel>
             <AlertDialogAction 
