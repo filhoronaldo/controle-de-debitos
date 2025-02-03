@@ -150,7 +150,8 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
     toast.success('Pagamento registrado com sucesso!');
   };
 
-  const handleDeletePayment = async () => {
+  const handleDeletePayment = async (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent event from bubbling up
     if (!paymentToDelete) return;
 
     try {
@@ -170,6 +171,12 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
       setIsDeletePopoverOpen(false);
       setPaymentToDelete(null);
     }
+  };
+
+  const handleCancelDelete = (e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent event from bubbling up
+    setIsDeletePopoverOpen(false);
+    setPaymentToDelete(null);
   };
 
   const firstPendingDebtId = invoiceData?.transactions?.find(t => t.type === 'debt')?.id || null;
@@ -286,7 +293,8 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
                           <Button
                             variant="ghost"
                             size="icon"
-                            onClick={() => {
+                            onClick={(e) => {
+                              e.stopPropagation(); // Prevent event from bubbling up
                               setPaymentToDelete({ 
                                 id: transaction.id, 
                                 amount: Math.abs(Number(transaction.amount)) 
@@ -302,6 +310,7 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
                           className="w-fit p-2" 
                           side="left"
                           align="center"
+                          onClick={(e) => e.stopPropagation()} // Prevent closing when clicking inside content
                         >
                           <div className="flex items-center gap-2">
                             <span className="text-sm font-medium">Confirma?</span>
@@ -317,10 +326,7 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => {
-                                setIsDeletePopoverOpen(false);
-                                setPaymentToDelete(null);
-                              }}
+                              onClick={handleCancelDelete}
                               className="text-destructive hover:text-destructive hover:bg-destructive/10"
                             >
                               <X className="h-4 w-4" />
