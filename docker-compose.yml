@@ -1,0 +1,26 @@
+version: "3.7"
+
+services:
+  lovable-app:
+    image: node:18-alpine
+    working_dir: /app
+    volumes:
+      - .:/app
+    ports:
+      - "8080:3000"
+    command: sh -c "npm install && npm run dev"
+    restart: always
+
+    networks:
+      - MeuSabia
+
+    labels:
+      - traefik.enable=1
+      - traefik.http.routers.lovable-app.rule=Host(`lovable.meusabia.com`)
+      - traefik.http.routers.lovable-app.entrypoints=websecure
+      - traefik.http.routers.lovable-app.tls.certresolver=letsencryptresolver
+      - traefik.http.services.lovable-app.loadbalancer.server.port=3000
+
+networks:
+  MeuSabia:
+    external: true
