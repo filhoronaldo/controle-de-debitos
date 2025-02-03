@@ -31,6 +31,7 @@ interface InvoiceDialogProps {
 export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: InvoiceDialogProps) {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [paymentToDelete, setPaymentToDelete] = useState<{ id: string; amount: number } | null>(null);
+  const [isAlertOpen, setIsAlertOpen] = useState(false);
 
   const { data: invoiceData, refetch } = useQuery({
     queryKey: ['invoice-debts', clientId, format(currentMonth, 'yyyy-MM')],
@@ -169,13 +170,14 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
 
       if (error) throw error;
 
+      await refetch();
       toast.success('Pagamento excluído com sucesso!');
-      refetch();
     } catch (error) {
       console.error('Error deleting payment:', error);
       toast.error('Erro ao excluir pagamento');
     } finally {
       setPaymentToDelete(null);
+      setIsAlertOpen(false);
     }
   };
 
@@ -286,7 +288,10 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => setPaymentToDelete({ id: transaction.id, amount: Math.abs(Number(transaction.amount)) })}
+                          onClick={() => {
+                            setPaymentToDelete({ id: transaction.id, amount: Math.abs(Number(transaction.amount)) });
+                            setIsAlertOpen(true);
+                          }}
                           className="text-destructive hover:text-destructive hover:bg-destructive/10"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -309,8 +314,8 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
       </Dialog>
 
       <AlertDialog 
-        open={!!paymentToDelete} 
-        onOpenChange={(isOpen) => !isOpen && setPaymentToDelete(null)}
+        open={isAlertOpen} 
+        onOpenChange={setIsAlertOpen}
       >
         <AlertDialogContent>
           <AlertDialogHeader>
@@ -321,7 +326,12 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogCancel onClick={() => {
+              setIsAlertOpen(false);
+              setPaymentToDelete(null);
+            }}>
+              Cancelar
+            </AlertDialogCancel>
             <AlertDialogAction 
               onClick={handleDeletePayment}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
