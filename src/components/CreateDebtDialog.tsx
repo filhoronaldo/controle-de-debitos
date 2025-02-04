@@ -46,7 +46,7 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
     defaultValues: {
       amount: 0,
       description: "",
-      transaction_date: new Date().toISOString().split('T')[0],
+      transaction_date: new Date().toLocaleDateString('en-CA'), // This format returns YYYY-MM-DD
       invoice_month: new Date().toISOString().split('T')[0].substring(0, 7),
     },
   });
