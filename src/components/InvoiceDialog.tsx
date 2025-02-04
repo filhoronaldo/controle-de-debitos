@@ -64,7 +64,7 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
             acc.push({
               id: payment.id,
               date: payment.payment_date,
-              description: `Pagamento - ${debt.description || 'Sem descrição'}`,
+              description: "Pagamento",
               amount: -payment.amount,
               type: 'payment',
               payment_method: payment.payment_method,
