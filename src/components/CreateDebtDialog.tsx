@@ -129,27 +129,26 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
-              control={form.control}
-              name="amount"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Valor</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="R$ 0,00"
-                      {...field}
-                      onChange={(e) => {
-                        const formatted = formatCurrency(e.target.value);
-                        e.target.value = formatted;
-                        field.onChange(parseCurrencyToNumber(formatted));
-                      }}
-                      value={formatCurrency((field.value * 100).toString())}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+  control={form.control}
+  name="amount"
+  render={({ field }) => (
+    <FormItem>
+      <FormLabel>Valor</FormLabel>
+      <FormControl>
+        <Input
+          placeholder="R$ 0,00"
+          onChange={(e) => {
+            const formatted = formatCurrency(e.target.value);
+            field.onChange(parseCurrencyToNumber(formatted)); // Apenas salva o número corretamente
+          }}
+          value={field.value ? formatCurrency(field.value.toString()) : "R$ 0,00"}
+        />
+      </FormControl>
+      <FormMessage />
+    </FormItem>
+  )}
+/>
+
             <FormField
               control={form.control}
               name="description"
