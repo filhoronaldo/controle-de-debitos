@@ -84,7 +84,6 @@ export type Database = {
         Row: {
           amount: number
           created_at: string
-          debt_id: string
           id: string
           invoice_month: string
           payment_date: string
@@ -93,7 +92,6 @@ export type Database = {
         Insert: {
           amount: number
           created_at?: string
-          debt_id: string
           id?: string
           invoice_month: string
           payment_date?: string
@@ -102,21 +100,12 @@ export type Database = {
         Update: {
           amount?: number
           created_at?: string
-          debt_id?: string
           id?: string
           invoice_month?: string
           payment_date?: string
           payment_method?: string | null
         }
-        Relationships: [
-          {
-            foreignKeyName: "payments_debt_id_fkey"
-            columns: ["debt_id"]
-            isOneToOne: false
-            referencedRelation: "debts"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
     }
     Views: {

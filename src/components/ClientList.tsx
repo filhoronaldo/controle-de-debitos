@@ -46,21 +46,25 @@ export function ClientList() {
           debts (
             amount,
             transaction_date,
+            invoice_month,
             id
           )
         `);
 
       if (clientsError) throw clientsError;
 
-      // Then, get all payments for each client's debts
+      // Then, get all payments for each client
       const clientsWithPayments = await Promise.all(
         clientsData.map(async (client: any) => {
-          const debtIds = client.debts.map((debt: any) => debt.id);
+          // Get unique invoice months from debts
+          const invoiceMonths = [...new Set(client.debts
+            .filter((debt: any) => debt.invoice_month)
+            .map((debt: any) => debt.invoice_month))];
           
           const { data: payments, error: paymentsError } = await supabase
             .from('payments')
-            .select('amount')
-            .in('debt_id', debtIds);
+            .select('amount, invoice_month')
+            .in('invoice_month', invoiceMonths);
 
           if (paymentsError) throw paymentsError;
 
