@@ -27,6 +27,7 @@ export function ClientList() {
     id: string;
     name: string;
   } | null>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
   const navigate = useNavigate();
 
@@ -85,6 +86,17 @@ export function ClientList() {
                           id: client.id,
                           name: client.name,
                         });
+                        setIsDetailsOpen(true);
+                      }}
+                    >
+                      Detalhes
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => {
+                        setSelectedClient({
+                          id: client.id,
+                          name: client.name,
+                        });
                         setIsInvoiceOpen(true);
                       }}
                     >
@@ -108,12 +120,20 @@ export function ClientList() {
       </Table>
 
       {selectedClient && (
-        <InvoiceDialog
-          clientId={selectedClient.id}
-          clientName={selectedClient.name}
-          open={isInvoiceOpen}
-          onOpenChange={setIsInvoiceOpen}
-        />
+        <>
+          <ClientDetailsDialog
+            clientId={selectedClient.id}
+            clientName={selectedClient.name}
+            open={isDetailsOpen}
+            onOpenChange={setIsDetailsOpen}
+          />
+          <InvoiceDialog
+            clientId={selectedClient.id}
+            clientName={selectedClient.name}
+            open={isInvoiceOpen}
+            onOpenChange={setIsInvoiceOpen}
+          />
+        </>
       )}
     </div>
   );
