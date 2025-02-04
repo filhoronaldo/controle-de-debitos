@@ -146,19 +146,20 @@ export function CreatePaymentDialog({ debtId, amount, onPaymentComplete, trigger
         <Input
           placeholder="R$ 0,00"
           inputMode="numeric"
-          {...field}
           onChange={(e) => {
-            const rawValue = e.target.value;
-            const parsedValue = parseCurrencyToNumber(rawValue);
-            field.onChange(parsedValue);
+            let rawValue = e.target.value.replace(/\D/g, ""); // Remove tudo que não for número
+            const formatted = formatCurrency(rawValue || "0"); // Mantém pelo menos um zero formatado
+            field.onChange(parseCurrencyToNumber(formatted)); // Atualiza o estado apenas com o número
+            e.target.value = formatted; // Exibe o valor formatado
           }}
-          value={field.value ? formatCurrency(field.value.toString()) : "R$ 0,00"}
+          value={field.value ? formatCurrency((field.value * 100).toFixed(0)) : "R$ 0,00"}
         />
       </FormControl>
       <FormMessage />
     </FormItem>
   )}
 />
+
             <FormField
               control={form.control}
               name="payment_date"
