@@ -6,7 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO, startOfMonth, endOfMonth, addMonths, subMonths, setDate, isBefore } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { CreatePaymentDialog } from "./CreatePaymentDialog";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
@@ -35,10 +35,7 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
 
       const { data: debts, error: debtsError } = await supabase
         .from('debts')
-        .select(`
-          *,
-          payments (*)
-        `)
+        .select('*')
         .eq('client_id', clientId)
         .gte('invoice_month', startDate)
         .lte('invoice_month', endDate)
@@ -49,38 +46,40 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
         throw debtsError;
       }
 
-      const transactions = debts.reduce((acc: any[], debt: any) => {
-        acc.push({
+      const { data: payments, error: paymentsError } = await supabase
+        .from('payments')
+        .select('*')
+        .eq('invoice_month', startDate)
+        .order('payment_date', { ascending: true });
+
+      if (paymentsError) {
+        toast.error('Erro ao carregar pagamentos');
+        throw paymentsError;
+      }
+
+      const transactions = [
+        ...(debts || []).map((debt: any) => ({
           id: debt.id,
           date: debt.transaction_date || debt.created_at,
           description: debt.description,
           amount: debt.amount,
           type: 'debt',
           invoice_month: debt.invoice_month
-        });
-
-        if (debt.payments) {
-          debt.payments.forEach((payment: any) => {
-            acc.push({
-              id: payment.id,
-              date: payment.payment_date,
-              description: `Pagamento - ${debt.description || 'Sem descrição'}`,
-              amount: -payment.amount,
-              type: 'payment',
-              payment_method: payment.payment_method,
-              invoice_month: payment.invoice_month
-            });
-          });
-        }
-
-        return acc;
-      }, []);
+        })),
+        ...(payments || []).map((payment: any) => ({
+          id: payment.id,
+          date: payment.payment_date,
+          description: payment.payment_method,
+          amount: -payment.amount,
+          type: 'payment',
+          payment_method: payment.payment_method,
+          invoice_month: payment.invoice_month
+        }))
+      ].sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime());
 
       return {
         invoiceDay: client?.invoice_day || 1,
-        transactions: transactions.sort((a: any, b: any) => 
-          new Date(a.date).getTime() - new Date(b.date).getTime()
-        )
+        transactions
       };
     }
   });
@@ -205,10 +204,10 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
                 Vencimento: <span className="font-medium text-foreground">{getDueDate()}</span>
               </div>
             </div>
-            {firstPendingDebtId && (
+            {pendingAmount > 0 && (
               <CreatePaymentDialog 
-                debtId={firstPendingDebtId} 
                 amount={pendingAmount}
+                invoiceMonth={format(startOfMonth(currentMonth), 'yyyy-MM-dd')}
                 onPaymentComplete={handlePaymentComplete}
                 trigger={
                   <Button>
@@ -241,8 +240,6 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
                   <TableCell>{transaction.description}</TableCell>
                   <TableCell className={transaction.type === 'payment' ? 'text-success' : ''}>
                     R$ {Math.abs(Number(transaction.amount)).toFixed(2)}
-                    {transaction.type === 'payment' && transaction.payment_method && 
-                      ` (${transaction.payment_method})`}
                   </TableCell>
                   <TableCell>
                     {formatMonthYear(transaction.invoice_month)}
