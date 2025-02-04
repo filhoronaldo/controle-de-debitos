@@ -57,9 +57,10 @@ export function ClientList() {
       const clientsWithPayments = await Promise.all(
         clientsData.map(async (client: any) => {
           // Get unique invoice months from debts
-          const invoiceMonths = [...new Set(client.debts
+          const invoiceMonths = client.debts
             .filter((debt: any) => debt.invoice_month)
-            .map((debt: any) => debt.invoice_month))];
+            .map((debt: any) => debt.invoice_month)
+            .filter((month: string | null): month is string => month !== null);
           
           const { data: payments, error: paymentsError } = await supabase
             .from('payments')
