@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { CreateDebtDialog } from "./CreateDebtDialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useState } from "react";
-import { format, parseISO } from "date-fns";
+import { format, parseISO, isBefore } from "date-fns";
 import { toast } from "sonner";
 import { InvoiceDialog } from "./InvoiceDialog";
 import { ClientDetailsDialog } from "./ClientDetailsDialog";
@@ -37,55 +37,66 @@ export function ClientList() {
   const { data: clients, isLoading } = useQuery({
     queryKey: ['clients'],
     queryFn: async () => {
-      // First, get clients with their debts
+      // First, get clients with their debts and payments
       const { data: clientsData, error: clientsError } = await supabase
         .from('clients')
         .select(`
           id,
           name,
+          invoice_day,
           debts (
             amount,
             transaction_date,
             invoice_month,
-            id
+            id,
+            payments (
+              amount,
+              invoice_month
+            )
           )
         `);
 
       if (clientsError) throw clientsError;
 
-      // Then, get all payments for each client
-      const clientsWithPayments = await Promise.all(
-        clientsData.map(async (client: any) => {
-          // Get unique invoice months from debts
-          const invoiceMonths = client.debts
-            .filter((debt: any) => debt.invoice_month)
-            .map((debt: any) => debt.invoice_month)
-            .filter((month: string | null): month is string => month !== null);
-          
-          const { data: payments, error: paymentsError } = await supabase
-            .from('payments')
-            .select('amount, invoice_month')
-            .in('invoice_month', invoiceMonths);
+      const clientsWithStatus = clientsData.map((client: any) => {
+        const debts = client.debts || [];
+        let totalDebt = 0;
+        let hasOverdueOrPartialPayments = false;
 
-          if (paymentsError) throw paymentsError;
+        // Process each debt
+        debts.forEach((debt: any) => {
+          const debtAmount = Number(debt.amount);
+          totalDebt += debtAmount;
 
-          const totalDebt = client.debts.reduce((sum: number, debt: any) => sum + Number(debt.amount), 0);
-          const totalPayments = payments?.reduce((sum: number, payment: any) => sum + Number(payment.amount), 0) || 0;
-          
-          const hasOverdueBills = client.debts.some((debt: any) => {
-            return debt.transaction_date && parseISO(debt.transaction_date) < new Date();
-          });
+          // Calculate total payments for this debt
+          const totalPayments = (debt.payments || []).reduce((sum: number, payment: any) => 
+            sum + Number(payment.amount), 0);
 
-          return {
-            id: client.id,
-            name: client.name,
-            total_debt: totalDebt - totalPayments,
-            is_overdue: hasOverdueBills
-          };
-        })
-      );
+          // Check if debt is overdue
+          const isOverdue = debt.transaction_date && 
+            isBefore(parseISO(debt.transaction_date), new Date());
 
-      return clientsWithPayments;
+          // Check if debt is partially paid
+          const isPartiallyPaid = totalPayments > 0 && totalPayments < debtAmount;
+
+          // Update overdue status if either condition is met
+          if (isOverdue || isPartiallyPaid) {
+            hasOverdueOrPartialPayments = true;
+          }
+
+          // Subtract payments from total debt
+          totalDebt -= totalPayments;
+        });
+
+        return {
+          id: client.id,
+          name: client.name,
+          total_debt: totalDebt,
+          is_overdue: hasOverdueOrPartialPayments
+        };
+      });
+
+      return clientsWithStatus;
     }
   });
 
