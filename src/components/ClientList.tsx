@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { CreateDebtDialog } from "./CreateDebtDialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useState } from "react";
-import { format, parseISO, isBefore } from "date-fns";
+import { format, parseISO, isBefore, startOfMonth, endOfMonth, isAfter } from "date-fns";
 import { toast } from "sonner";
 import { InvoiceDialog } from "./InvoiceDialog";
 import { ClientDetailsDialog } from "./ClientDetailsDialog";
@@ -61,11 +61,15 @@ export function ClientList() {
 
       if (clientsError) throw clientsError;
 
+      const currentDate = new Date();
+      const currentMonth = startOfMonth(currentDate);
+
       const clientsWithStatus = clientsData.map((client: any) => {
         const debts = client.debts || [];
         let totalDebt = 0;
-        let hasOverdueOrPartialPayments = false;
+        let hasOverdueDebts = false;
         let hasPendingDebts = false;
+        const invoiceDay = client.invoice_day || 1;
 
         // Process each debt
         debts.forEach((debt: any) => {
@@ -76,18 +80,25 @@ export function ClientList() {
           const totalPayments = (debt.payments || []).reduce((sum: number, payment: any) => 
             sum + Number(payment.amount), 0);
 
-          // Check if debt is overdue
-          const isOverdue = debt.transaction_date && 
-            isBefore(parseISO(debt.transaction_date), new Date());
-
-          // Check if debt is partially paid or open
-          if (debt.status === 'parcial' || debt.status === 'aberta') {
-            hasPendingDebts = true;
+          const debtMonth = startOfMonth(parseISO(debt.invoice_month));
+          const isPastMonth = isBefore(debtMonth, currentMonth);
+          const isCurrentMonth = debtMonth.getTime() === currentMonth.getTime();
+          
+          // Check if debt is from past months and is not fully paid
+          if (isPastMonth && (debt.status === 'parcial' || debt.status === 'aberta')) {
+            hasOverdueDebts = true;
+          }
+          
+          // Check if debt is from current month, past due date, and not fully paid
+          if (isCurrentMonth && 
+              debt.status !== 'paga' && 
+              isAfter(currentDate, new Date(currentDate.getFullYear(), currentDate.getMonth(), invoiceDay))) {
+            hasOverdueDebts = true;
           }
 
-          // Update overdue status if either condition is met
-          if (isOverdue || debt.status === 'parcial') {
-            hasOverdueOrPartialPayments = true;
+          // Check if there are any pending debts
+          if (debt.status === 'parcial' || debt.status === 'aberta') {
+            hasPendingDebts = true;
           }
 
           // Subtract payments from total debt
@@ -98,7 +109,7 @@ export function ClientList() {
           id: client.id,
           name: client.name,
           total_debt: totalDebt,
-          is_overdue: hasOverdueOrPartialPayments,
+          is_overdue: hasOverdueDebts,
           has_pending_debts: hasPendingDebts
         };
       });
@@ -191,7 +202,7 @@ export function ClientList() {
                     {client.is_overdue ? (
                       <Badge variant="destructive">Atrasado</Badge>
                     ) : client.has_pending_debts ? (
-                      <Badge variant="secondary">Pendente</Badge>
+                      <Badge variant="warning">Pendente</Badge>
                     ) : (
                       <Badge variant="success">Em dia</Badge>
                     )}
