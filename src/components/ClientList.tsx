@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { CreateDebtDialog } from "./CreateDebtDialog";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useState } from "react";
-import { format, parseISO, isBefore, startOfMonth, endOfMonth, isAfter } from "date-fns";
+import { format, parseISO, isBefore, startOfMonth, endOfMonth, isAfter, setHours, setMinutes, setSeconds, setMilliseconds } from "date-fns";
 import { toast } from "sonner";
 import { InvoiceDialog } from "./InvoiceDialog";
 import { ClientDetailsDialog } from "./ClientDetailsDialog";
@@ -90,10 +90,25 @@ export function ClientList() {
           }
           
           // Check if debt is from current month, past due date, and not fully paid
-          if (isCurrentMonth && 
-              debt.status !== 'paga' && 
-              isAfter(currentDate, new Date(currentDate.getFullYear(), currentDate.getMonth(), invoiceDay))) {
-            hasOverdueDebts = true;
+          if (isCurrentMonth && debt.status !== 'paga') {
+            // Set the due date to the end of the invoice day (23:59:59.999)
+            const dueDate = setMilliseconds(
+              setSeconds(
+                setMinutes(
+                  setHours(
+                    new Date(currentDate.getFullYear(), currentDate.getMonth(), invoiceDay),
+                    23
+                  ),
+                  59
+                ),
+                59
+              ),
+              999
+            );
+            
+            if (isAfter(currentDate, dueDate)) {
+              hasOverdueDebts = true;
+            }
           }
 
           // Check if there are any pending debts
