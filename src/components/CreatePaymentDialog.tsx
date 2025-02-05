@@ -1,34 +1,12 @@
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import { useQueryClient } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
-
-const paymentFormSchema = z.object({
-  amount: z.coerce.number().min(0.01, "O valor deve ser maior que zero"),
-  payment_date: z.string().optional(),
-});
-
-type PaymentFormValues = z.infer<typeof paymentFormSchema>;
+import { toast } from "sonner";
 
 interface CreatePaymentDialogProps {
   debtId: string;
@@ -38,146 +16,111 @@ interface CreatePaymentDialogProps {
 }
 
 export function CreatePaymentDialog({ debtId, amount, onPaymentComplete, trigger }: CreatePaymentDialogProps) {
-  const { toast } = useToast();
+  const [open, setOpen] = useState(false);
+  const [paymentAmount, setPaymentAmount] = useState(amount.toString());
+  const [paymentMethod, setPaymentMethod] = useState<string>("");
   const queryClient = useQueryClient();
-  const [invoiceMonth, setInvoiceMonth] = useState<string | null>(null);
 
-  useEffect(() => {
-    const fetchDebtDetails = async () => {
-      const { data: debt, error } = await supabase
+  const { data: debtDetails, isLoading: isLoadingDebt } = useQuery({
+    queryKey: ['debt-details', debtId],
+    queryFn: async () => {
+      const { data, error } = await supabase
         .from('debts')
         .select('invoice_month')
         .eq('id', debtId)
-        .single();
+        .maybeSingle();
 
       if (error) {
         console.error('Error fetching debt details:', error);
-        return;
+        throw error;
       }
 
-      if (debt?.invoice_month) {
-        setInvoiceMonth(debt.invoice_month);
+      if (!data) {
+        throw new Error('Débito não encontrado');
       }
-    };
 
-    fetchDebtDetails();
-  }, [debtId]);
-
-  const form = useForm<PaymentFormValues>({
-    resolver: zodResolver(paymentFormSchema),
-    defaultValues: {
-      amount: amount,
-      payment_date: new Date().toISOString().split('T')[0],
-    },
+      return data;
+    }
   });
 
-  const formatCurrency = (value: string) => {
-    let numbers = value.replace(/\D/g, "");
-    if (!numbers) return "R$ 0,00";
-    const amount = parseFloat(numbers) / 100;
-    return new Intl.NumberFormat('pt-BR', {
-      style: 'currency',
-      currency: 'BRL',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(amount);
-  };
+  const createPayment = useMutation({
+    mutationFn: async () => {
+      if (!debtDetails?.invoice_month) {
+        throw new Error('Mês de referência não encontrado');
+      }
 
-  const parseCurrencyToNumber = (value: string) => {
-    const numbers = value.replace(/\D/g, "");
-    return numbers ? parseFloat(numbers) / 100 : 0;
-  };
-
-  const onSubmit = async (data: PaymentFormValues) => {
-    try {
-      const { error: paymentError } = await supabase
+      const { error } = await supabase
         .from('payments')
         .insert({
           debt_id: debtId,
-          amount: data.amount,
-          payment_date: data.payment_date,
-          payment_method: 'manual',
-          invoice_month: invoiceMonth,
+          amount: Number(paymentAmount),
+          payment_method: paymentMethod,
+          invoice_month: debtDetails.invoice_month
         });
 
-      if (paymentError) throw paymentError;
-
-      toast({
-        title: "Pagamento registrado com sucesso!",
-        description: `Pagamento de ${formatCurrency(data.amount.toString())} registrado`,
-      });
-
+      if (error) throw error;
+    },
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoice-debts'] });
       queryClient.invalidateQueries({ queryKey: ['clients'] });
-      form.reset();
+      setOpen(false);
+      toast.success('Pagamento registrado com sucesso!');
       onPaymentComplete?.();
-    } catch (error) {
+    },
+    onError: (error) => {
       console.error('Error creating payment:', error);
-      toast({
-        title: "Erro ao registrar pagamento",
-        description: "Ocorreu um erro ao tentar registrar o pagamento. Tente novamente.",
-        variant: "destructive",
-      });
+      toast.error('Erro ao registrar pagamento');
     }
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    createPayment.mutate();
   };
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        {trigger || (
-          <Button variant="outline" size="sm">
-            Pagar
-          </Button>
-        )}
+        {trigger || <Button>Registrar Pagamento</Button>}
       </DialogTrigger>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Registrar Pagamento</DialogTitle>
         </DialogHeader>
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-  control={form.control}
-  name="amount"
-  render={({ field }) => (
-    <FormItem>
-      <FormLabel>Valor</FormLabel>
-      <FormControl>
-        <Input
-          placeholder="R$ 0,00"
-          inputMode="numeric"
-          onChange={(e) => {
-            let rawValue = e.target.value.replace(/\D/g, ""); // Remove tudo que não for número
-            const formatted = formatCurrency(rawValue || "0"); // Mantém pelo menos um zero formatado
-            field.onChange(parseCurrencyToNumber(formatted)); // Atualiza o estado apenas com o número
-            e.target.value = formatted; // Exibe o valor formatado
-          }}
-          value={field.value ? formatCurrency((field.value * 100).toFixed(0)) : "R$ 0,00"}
-        />
-      </FormControl>
-      <FormMessage />
-    </FormItem>
-  )}
-/>
-
-            <FormField
-              control={form.control}
-              name="payment_date"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Data do Pagamento</FormLabel>
-                  <FormControl>
-                    <Input type="date" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-            <Button type="submit" className="w-full">
-              Confirmar Pagamento
+        {isLoadingDebt ? (
+          <div>Carregando...</div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="amount">Valor</Label>
+              <Input
+                id="amount"
+                type="number"
+                step="0.01"
+                value={paymentAmount}
+                onChange={(e) => setPaymentAmount(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="payment-method">Método de Pagamento</Label>
+              <Select value={paymentMethod} onValueChange={setPaymentMethod} required>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o método de pagamento" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="pix">PIX</SelectItem>
+                  <SelectItem value="dinheiro">Dinheiro</SelectItem>
+                  <SelectItem value="cartao">Cartão</SelectItem>
+                  <SelectItem value="transferencia">Transferência</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button type="submit" className="w-full" disabled={createPayment.isPending}>
+              {createPayment.isPending ? 'Registrando...' : 'Registrar Pagamento'}
             </Button>
           </form>
-        </Form>
+        )}
       </DialogContent>
     </Dialog>
   );
