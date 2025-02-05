@@ -10,12 +10,14 @@ import { format, parseISO, isBefore } from "date-fns";
 import { toast } from "sonner";
 import { InvoiceDialog } from "./InvoiceDialog";
 import { ClientDetailsDialog } from "./ClientDetailsDialog";
+import { Badge } from "@/components/ui/badge";
 
 interface Client {
   id: string;
   name: string;
   total_debt: number;
   is_overdue: boolean;
+  has_pending_debts: boolean;
 }
 
 interface Transaction {
@@ -24,6 +26,7 @@ interface Transaction {
   description: string;
   transaction_date: string;
   invoice_month: string;
+  status: 'aberta' | 'paga' | 'parcial';
 }
 
 export function ClientList() {
@@ -37,7 +40,6 @@ export function ClientList() {
   const { data: clients, isLoading } = useQuery({
     queryKey: ['clients'],
     queryFn: async () => {
-      // First, get clients with their debts and payments
       const { data: clientsData, error: clientsError } = await supabase
         .from('clients')
         .select(`
@@ -49,6 +51,7 @@ export function ClientList() {
             transaction_date,
             invoice_month,
             id,
+            status,
             payments (
               amount,
               invoice_month
@@ -62,6 +65,7 @@ export function ClientList() {
         const debts = client.debts || [];
         let totalDebt = 0;
         let hasOverdueOrPartialPayments = false;
+        let hasPendingDebts = false;
 
         // Process each debt
         debts.forEach((debt: any) => {
@@ -76,11 +80,13 @@ export function ClientList() {
           const isOverdue = debt.transaction_date && 
             isBefore(parseISO(debt.transaction_date), new Date());
 
-          // Check if debt is partially paid
-          const isPartiallyPaid = totalPayments > 0 && totalPayments < debtAmount;
+          // Check if debt is partially paid or open
+          if (debt.status === 'parcial' || debt.status === 'aberta') {
+            hasPendingDebts = true;
+          }
 
           // Update overdue status if either condition is met
-          if (isOverdue || isPartiallyPaid) {
+          if (isOverdue || debt.status === 'parcial') {
             hasOverdueOrPartialPayments = true;
           }
 
@@ -92,7 +98,8 @@ export function ClientList() {
           id: client.id,
           name: client.name,
           total_debt: totalDebt,
-          is_overdue: hasOverdueOrPartialPayments
+          is_overdue: hasOverdueOrPartialPayments,
+          has_pending_debts: hasPendingDebts
         };
       });
 
@@ -182,9 +189,11 @@ export function ClientList() {
                 <TableCell>
                   <div className="flex items-center gap-2">
                     {client.is_overdue ? (
-                      <span className="text-destructive">Atrasado</span>
+                      <Badge variant="destructive">Atrasado</Badge>
+                    ) : client.has_pending_debts ? (
+                      <Badge variant="secondary">Pendente</Badge>
                     ) : (
-                      <span className="text-green-500">Em dia</span>
+                      <Badge variant="success">Em dia</Badge>
                     )}
                   </div>
                 </TableCell>
@@ -236,6 +245,7 @@ export function ClientList() {
                   <TableHead>Descrição</TableHead>
                   <TableHead>Valor</TableHead>
                   <TableHead>Mês Referência</TableHead>
+                  <TableHead>Status</TableHead>
                   <TableHead>Ações</TableHead>
                 </TableRow>
               </TableHeader>
@@ -255,6 +265,19 @@ export function ClientList() {
                         format(parseISO(transaction.invoice_month), 'MM/yyyy') : 
                         '-'
                       }
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={
+                          transaction.status === 'paga' ? 'success' :
+                          transaction.status === 'parcial' ? 'warning' :
+                          'secondary'
+                        }
+                      >
+                        {transaction.status === 'paga' ? 'Pago' :
+                         transaction.status === 'parcial' ? 'Parcial' :
+                         'Em Aberto'}
+                      </Badge>
                     </TableCell>
                     <TableCell>
                       <Button
