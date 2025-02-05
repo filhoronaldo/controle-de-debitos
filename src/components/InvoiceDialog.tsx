@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format, parseISO, startOfMonth, endOfMonth, addMonths, subMonths, setDate } from "date-fns";
+import { format, parseISO, startOfMonth, endOfMonth, addMonths, subMonths, setDate, isBefore } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useState, useEffect } from "react";
 import { CreatePaymentDialog } from "./CreatePaymentDialog";
