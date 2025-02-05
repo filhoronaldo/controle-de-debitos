@@ -47,6 +47,7 @@ export type Database = {
           description: string | null
           id: string
           invoice_month: string | null
+          status: Database["public"]["Enums"]["debt_status"]
           transaction_date: string | null
           updated_at: string
         }
@@ -57,6 +58,7 @@ export type Database = {
           description?: string | null
           id?: string
           invoice_month?: string | null
+          status?: Database["public"]["Enums"]["debt_status"]
           transaction_date?: string | null
           updated_at?: string
         }
@@ -67,6 +69,7 @@ export type Database = {
           description?: string | null
           id?: string
           invoice_month?: string | null
+          status?: Database["public"]["Enums"]["debt_status"]
           transaction_date?: string | null
           updated_at?: string
         }
@@ -126,7 +129,7 @@ export type Database = {
       [_ in never]: never
     }
     Enums: {
-      [_ in never]: never
+      debt_status: "aberta" | "paga" | "parcial"
     }
     CompositeTypes: {
       [_ in never]: never
