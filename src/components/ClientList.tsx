@@ -143,19 +143,29 @@ export function ClientList() {
 
   const deleteTransaction = useMutation({
     mutationFn: async (transactionId: string) => {
-      const { error } = await supabase
+      // Primeiro, excluir todos os pagamentos associados à dívida
+      const { error: paymentsError } = await supabase
+        .from('payments')
+        .delete()
+        .eq('debt_id', transactionId);
+      
+      if (paymentsError) throw paymentsError;
+
+      // Depois, excluir a dívida
+      const { error: debtError } = await supabase
         .from('debts')
         .delete()
         .eq('id', transactionId);
       
-      if (error) throw error;
+      if (debtError) throw debtError;
     },
     onSuccess: () => {
       toast.success('Transação excluída com sucesso');
       refetchTransactions();
       queryClient.invalidateQueries({ queryKey: ['clients'] });
     },
-    onError: () => {
+    onError: (error) => {
+      console.error('Error deleting transaction:', error);
       toast.error('Erro ao excluir transação');
     }
   });
