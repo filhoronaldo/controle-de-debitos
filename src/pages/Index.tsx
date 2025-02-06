@@ -3,8 +3,67 @@ import { ClientList } from "@/components/ClientList";
 import { Button } from "@/components/ui/button";
 import { CreditCard, DollarSign, Receipt, User } from "lucide-react";
 import { CreateClientDialog } from "@/components/CreateClientDialog";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { startOfDay, endOfDay } from "date-fns";
+import { formatCurrency } from "@/lib/utils";
 
 const Index = () => {
+  // Query para buscar o total de débitos e pagamentos
+  const { data: totalDebt } = useQuery({
+    queryKey: ['total-debt'],
+    queryFn: async () => {
+      // Busca total de débitos
+      const { data: debts, error: debtsError } = await supabase
+        .from('debts')
+        .select('amount');
+      
+      if (debtsError) throw debtsError;
+
+      // Busca total de pagamentos
+      const { data: payments, error: paymentsError } = await supabase
+        .from('payments')
+        .select('amount');
+      
+      if (paymentsError) throw paymentsError;
+
+      const totalDebts = debts.reduce((sum, debt) => sum + Number(debt.amount), 0);
+      const totalPayments = payments.reduce((sum, payment) => sum + Number(payment.amount), 0);
+
+      return totalDebts - totalPayments;
+    }
+  });
+
+  // Query para buscar o total de clientes
+  const { data: totalClients } = useQuery({
+    queryKey: ['total-clients'],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('clients')
+        .select('*', { count: 'exact', head: true });
+      
+      if (error) throw error;
+      return count || 0;
+    }
+  });
+
+  // Query para buscar pagamentos do dia
+  const { data: todayPayments } = useQuery({
+    queryKey: ['today-payments'],
+    queryFn: async () => {
+      const today = new Date();
+      const { data, error } = await supabase
+        .from('payments')
+        .select('amount')
+        .gte('payment_date', startOfDay(today).toISOString())
+        .lte('payment_date', endOfDay(today).toISOString());
+      
+      if (error) throw error;
+
+      return data.reduce((sum, payment) => sum + Number(payment.amount), 0);
+    }
+  });
+
   return (
     <div className="container mx-auto p-6 space-y-8 animate-fadeIn">
       <div className="flex justify-between items-center">
@@ -15,17 +74,17 @@ const Index = () => {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <DashboardCard
           title="Total de Débitos"
-          value="R$ 4.450,00"
+          value={formatCurrency(totalDebt || 0)}
           icon={<DollarSign className="h-4 w-4 text-muted-foreground" />}
         />
         <DashboardCard
           title="Clientes Ativos"
-          value="3"
+          value={totalClients || 0}
           icon={<User className="h-4 w-4 text-muted-foreground" />}
         />
         <DashboardCard
           title="Pagamentos Hoje"
-          value="R$ 750,00"
+          value={formatCurrency(todayPayments || 0)}
           icon={<CreditCard className="h-4 w-4 text-muted-foreground" />}
         />
         <DashboardCard
