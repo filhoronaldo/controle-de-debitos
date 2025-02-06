@@ -105,7 +105,7 @@ export function ClientList() {
           totalDebt -= totalPayments;
         });
 
-        let status = 'em_dia';
+        let status: Client['status'] = 'em_dia';
         if (hasOverdueDebts) {
           status = 'atrasado';
         } else if (hasPartialOverdueDebts) {
