@@ -18,19 +18,26 @@ export function ClientRow({
   onViewDetails,
   onViewHistory,
 }: ClientRowProps) {
+  const getStatusBadge = (status: Client['status']) => {
+    switch (status) {
+      case 'atrasado':
+        return <Badge variant="destructive">Atrasado</Badge>;
+      case 'atrasado_parcial':
+        return <Badge variant="destructive">Atrasado - Parcial</Badge>;
+      case 'pendente':
+        return <Badge variant="warning">Pendente</Badge>;
+      default:
+        return <Badge variant="success">Em dia</Badge>;
+    }
+  };
+
   return (
     <TableRow className="hover:bg-muted/50">
       <TableCell className="font-medium">{client.name}</TableCell>
       <TableCell>R$ {client.total_debt.toFixed(2)}</TableCell>
       <TableCell>
         <div className="flex items-center gap-2">
-          {client.is_overdue ? (
-            <Badge variant="destructive">Atrasado</Badge>
-          ) : client.has_pending_debts ? (
-            <Badge variant="warning">Pendente</Badge>
-          ) : (
-            <Badge variant="success">Em dia</Badge>
-          )}
+          {getStatusBadge(client.status)}
         </div>
       </TableCell>
       <TableCell>

@@ -50,6 +50,7 @@ export function ClientList() {
         const debts = client.debts || [];
         let totalDebt = 0;
         let hasOverdueDebts = false;
+        let hasPartialOverdueDebts = false;
         let hasPendingDebts = false;
         const invoiceDay = client.invoice_day || 1;
 
@@ -63,9 +64,14 @@ export function ClientList() {
           const debtMonth = startOfMonth(parseISO(debt.invoice_month));
           const isPastMonth = isBefore(debtMonth, currentMonth);
           const isCurrentMonth = debtMonth.getTime() === currentMonth.getTime();
+          const hasPartialPayment = totalPayments > 0 && totalPayments < debtAmount;
           
-          if (isPastMonth && (debt.status === 'parcial' || debt.status === 'aberta')) {
-            hasOverdueDebts = true;
+          if (isPastMonth) {
+            if (hasPartialPayment) {
+              hasPartialOverdueDebts = true;
+            } else if (debt.status === 'parcial' || debt.status === 'aberta') {
+              hasOverdueDebts = true;
+            }
           }
           
           if (isCurrentMonth && debt.status !== 'paga') {
@@ -84,7 +90,11 @@ export function ClientList() {
             );
             
             if (isAfter(currentDate, dueDate)) {
-              hasOverdueDebts = true;
+              if (hasPartialPayment) {
+                hasPartialOverdueDebts = true;
+              } else {
+                hasOverdueDebts = true;
+              }
             }
           }
 
@@ -95,12 +105,20 @@ export function ClientList() {
           totalDebt -= totalPayments;
         });
 
+        let status = 'em_dia';
+        if (hasOverdueDebts) {
+          status = 'atrasado';
+        } else if (hasPartialOverdueDebts) {
+          status = 'atrasado_parcial';
+        } else if (hasPendingDebts) {
+          status = 'pendente';
+        }
+
         return {
           id: client.id,
           name: client.name,
           total_debt: totalDebt,
-          is_overdue: hasOverdueDebts,
-          has_pending_debts: hasPendingDebts
+          status
         };
       });
 
