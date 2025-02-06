@@ -164,6 +164,8 @@ export function ClientList() {
     setSelectedClient(clientId);
     setSelectedClientName(clientName);
     setIsHistoryOpen(true);
+    // Força atualização dos dados quando abrir o histórico
+    queryClient.invalidateQueries({ queryKey: ['transactions', clientId] });
   };
 
   const handleViewInvoice = (clientId: string, clientName: string) => {
