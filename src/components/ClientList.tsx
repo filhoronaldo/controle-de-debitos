@@ -1,33 +1,15 @@
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
-import { CreditCard, History, Trash2, User } from "lucide-react";
+import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { CreateDebtDialog } from "./CreateDebtDialog";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useState } from "react";
 import { format, parseISO, isBefore, startOfMonth, endOfMonth, isAfter, setHours, setMinutes, setSeconds, setMilliseconds } from "date-fns";
 import { toast } from "sonner";
 import { InvoiceDialog } from "./InvoiceDialog";
 import { ClientDetailsDialog } from "./ClientDetailsDialog";
-import { Badge } from "@/components/ui/badge";
-
-interface Client {
-  id: string;
-  name: string;
-  total_debt: number;
-  is_overdue: boolean;
-  has_pending_debts: boolean;
-}
-
-interface Transaction {
-  id: string;
-  amount: number;
-  description: string;
-  transaction_date: string;
-  invoice_month: string;
-  status: 'aberta' | 'paga' | 'parcial';
-}
+import { TransactionHistory } from "./TransactionHistory";
+import { ClientRow } from "./ClientRow";
+import { Client } from "@/types/client";
+import { Transaction } from "@/types/transaction";
 
 export function ClientList() {
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
@@ -37,7 +19,7 @@ export function ClientList() {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const queryClient = useQueryClient();
   
-  const { data: clients, isLoading, refetch: refetchClients } = useQuery({
+  const { data: clients, isLoading } = useQuery({
     queryKey: ['clients'],
     queryFn: async () => {
       const { data: clientsData, error: clientsError } = await supabase
@@ -137,7 +119,7 @@ export function ClientList() {
         .order('transaction_date', { ascending: false });
 
       if (error) throw error;
-      return data;
+      return data as Transaction[];
     }
   });
 
@@ -153,7 +135,7 @@ export function ClientList() {
     onSuccess: () => {
       toast.success('Transação excluída com sucesso');
       refetchTransactions();
-      refetchClients();
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
     },
     onError: () => {
       toast.error('Erro ao excluir transação');
@@ -164,7 +146,6 @@ export function ClientList() {
     setSelectedClient(clientId);
     setSelectedClientName(clientName);
     setIsHistoryOpen(true);
-    // Força atualização dos dados quando abrir o histórico
     queryClient.invalidateQueries({ queryKey: ['transactions', clientId] });
   };
 
@@ -204,119 +185,25 @@ export function ClientList() {
           </TableHeader>
           <TableBody>
             {clients?.map((client) => (
-              <TableRow key={client.id} className="hover:bg-muted/50">
-                <TableCell className="font-medium">{client.name}</TableCell>
-                <TableCell>R$ {client.total_debt.toFixed(2)}</TableCell>
-                <TableCell>
-                  <div className="flex items-center gap-2">
-                    {client.is_overdue ? (
-                      <Badge variant="destructive">Atrasado</Badge>
-                    ) : client.has_pending_debts ? (
-                      <Badge variant="warning">Pendente</Badge>
-                    ) : (
-                      <Badge variant="success">Em dia</Badge>
-                    )}
-                  </div>
-                </TableCell>
-                <TableCell>
-                  <div className="flex gap-2">
-                    <CreateDebtDialog clientId={client.id} clientName={client.name} />
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => handleViewInvoice(client.id, client.name)}
-                    >
-                      <CreditCard className="h-4 w-4 mr-1" />
-                      Faturas
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => handleViewDetails(client.id, client.name)}
-                    >
-                      <User className="h-4 w-4 mr-1" />
-                      Detalhes
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={() => handleViewHistory(client.id, client.name)}
-                    >
-                      <History className="h-4 w-4 mr-1" />
-                      Histórico
-                    </Button>
-                  </div>
-                </TableCell>
-              </TableRow>
+              <ClientRow
+                key={client.id}
+                client={client}
+                onViewInvoice={handleViewInvoice}
+                onViewDetails={handleViewDetails}
+                onViewHistory={handleViewHistory}
+              />
             ))}
           </TableBody>
         </Table>
       </div>
 
-      <Dialog open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
-        <DialogContent className="max-w-3xl">
-          <DialogHeader>
-            <DialogTitle>Histórico de Transações - {selectedClientName}</DialogTitle>
-          </DialogHeader>
-          <div className="mt-4">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Data</TableHead>
-                  <TableHead>Descrição</TableHead>
-                  <TableHead>Valor</TableHead>
-                  <TableHead>Mês Referência</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {transactions?.map((transaction) => (
-                  <TableRow key={transaction.id}>
-                    <TableCell>
-                      {transaction.transaction_date ? 
-                        format(parseISO(transaction.transaction_date), 'dd/MM/yyyy') : 
-                        '-'
-                      }
-                    </TableCell>
-                    <TableCell>{transaction.description || '-'}</TableCell>
-                    <TableCell>R$ {Number(transaction.amount).toFixed(2)}</TableCell>
-                    <TableCell>
-                      {transaction.invoice_month ? 
-                        format(parseISO(transaction.invoice_month), 'MM/yyyy') : 
-                        '-'
-                      }
-                    </TableCell>
-                    <TableCell>
-                      <Badge
-                        variant={
-                          transaction.status === 'paga' ? 'success' :
-                          transaction.status === 'parcial' ? 'warning' :
-                          'secondary'
-                        }
-                      >
-                        {transaction.status === 'paga' ? 'Pago' :
-                         transaction.status === 'parcial' ? 'Parcial' :
-                         'Em Aberto'}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDeleteTransaction(transaction.id)}
-                        className="text-destructive hover:text-destructive/90"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <TransactionHistory
+        isOpen={isHistoryOpen}
+        onOpenChange={setIsHistoryOpen}
+        transactions={transactions}
+        clientName={selectedClientName}
+        onDeleteTransaction={handleDeleteTransaction}
+      />
 
       {selectedClient && (
         <>
@@ -327,7 +214,7 @@ export function ClientList() {
             onOpenChange={(open) => {
               setIsInvoiceOpen(open);
               if (!open) {
-                refetchClients();
+                queryClient.invalidateQueries({ queryKey: ['clients'] });
               }
             }}
           />
