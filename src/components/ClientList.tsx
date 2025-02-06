@@ -37,7 +37,7 @@ export function ClientList() {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const queryClient = useQueryClient();
   
-  const { data: clients, isLoading } = useQuery({
+  const { data: clients, isLoading, refetch: refetchClients } = useQuery({
     queryKey: ['clients'],
     queryFn: async () => {
       const { data: clientsData, error: clientsError } = await supabase
@@ -71,12 +71,10 @@ export function ClientList() {
         let hasPendingDebts = false;
         const invoiceDay = client.invoice_day || 1;
 
-        // Process each debt
         debts.forEach((debt: any) => {
           const debtAmount = Number(debt.amount);
           totalDebt += debtAmount;
 
-          // Calculate total payments for this debt
           const totalPayments = (debt.payments || []).reduce((sum: number, payment: any) => 
             sum + Number(payment.amount), 0);
 
@@ -84,14 +82,11 @@ export function ClientList() {
           const isPastMonth = isBefore(debtMonth, currentMonth);
           const isCurrentMonth = debtMonth.getTime() === currentMonth.getTime();
           
-          // Check if debt is from past months and is not fully paid
           if (isPastMonth && (debt.status === 'parcial' || debt.status === 'aberta')) {
             hasOverdueDebts = true;
           }
           
-          // Check if debt is from current month, past due date, and not fully paid
           if (isCurrentMonth && debt.status !== 'paga') {
-            // Set the due date to the end of the invoice day (23:59:59.999)
             const dueDate = setMilliseconds(
               setSeconds(
                 setMinutes(
@@ -111,12 +106,10 @@ export function ClientList() {
             }
           }
 
-          // Check if there are any pending debts
           if (debt.status === 'parcial' || debt.status === 'aberta') {
             hasPendingDebts = true;
           }
 
-          // Subtract payments from total debt
           totalDebt -= totalPayments;
         });
 
@@ -133,9 +126,9 @@ export function ClientList() {
     }
   });
 
-  const { data: transactions } = useQuery({
+  const { data: transactions, refetch: refetchTransactions } = useQuery({
     queryKey: ['transactions', selectedClient],
-    enabled: !!selectedClient,
+    enabled: !!selectedClient && isHistoryOpen,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('debts')
@@ -159,8 +152,8 @@ export function ClientList() {
     },
     onSuccess: () => {
       toast.success('Transação excluída com sucesso');
-      queryClient.invalidateQueries({ queryKey: ['transactions', selectedClient] });
-      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      refetchTransactions();
+      refetchClients();
     },
     onError: () => {
       toast.error('Erro ao excluir transação');
@@ -329,7 +322,12 @@ export function ClientList() {
             clientId={selectedClient}
             clientName={selectedClientName}
             open={isInvoiceOpen}
-            onOpenChange={setIsInvoiceOpen}
+            onOpenChange={(open) => {
+              setIsInvoiceOpen(open);
+              if (!open) {
+                refetchClients();
+              }
+            }}
           />
           <ClientDetailsDialog
             clientId={selectedClient}
