@@ -23,9 +23,21 @@ export function ClientRow({
       case 'atrasado':
         return <Badge variant="destructive">Atrasado</Badge>;
       case 'atrasado_parcial':
-        return <Badge variant="destructive">Atrasado - Parcial</Badge>;
+        return (
+          <Badge 
+            className="bg-orange-500 hover:bg-orange-600 text-white"
+          >
+            Atrasado - Parcial
+          </Badge>
+        );
       case 'pendente':
-        return <Badge variant="warning">Pendente</Badge>;
+        return (
+          <Badge 
+            className="bg-sky-500 hover:bg-sky-600 text-white"
+          >
+            Pendente
+          </Badge>
+        );
       default:
         return <Badge variant="success">Em dia</Badge>;
     }
