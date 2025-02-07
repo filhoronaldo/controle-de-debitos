@@ -189,7 +189,25 @@ export function ClientList() {
     setIsDetailsOpen(true);
   };
 
-  const handleDeleteTransaction = (transactionId: string) => {
+  const handleDeleteTransaction = async (transactionId: string) => {
+    // Primeiro, buscar o status da dívida
+    const { data: debtData, error: debtError } = await supabase
+      .from('debts')
+      .select('status')
+      .eq('id', transactionId)
+      .single();
+
+    if (debtError) {
+      console.error('Error fetching debt status:', debtError);
+      toast.error('Erro ao verificar status da dívida');
+      return;
+    }
+
+    if (debtData.status === 'parcial') {
+      toast.error('Não é possível excluir débitos com pagamentos parciais. Remova primeiro os pagamentos associados.');
+      return;
+    }
+
     if (window.confirm('Tem certeza que deseja excluir esta transação?')) {
       deleteTransaction.mutate(transactionId);
     }
