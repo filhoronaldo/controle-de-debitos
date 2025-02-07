@@ -23,12 +23,16 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { addMonths, format } from "date-fns";
 
 const debtFormSchema = z.object({
   amount: z.coerce.number().min(0.01, "O valor deve ser maior que zero"),
   description: z.string().optional(),
   transaction_date: z.string().optional(),
   invoice_month: z.string().optional(),
+  installments: z.coerce.number().min(1).max(48),
+  useInstallments: z.boolean(),
 });
 
 type DebtFormValues = z.infer<typeof debtFormSchema>;
@@ -48,6 +52,8 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
       description: "",
       transaction_date: new Date().toLocaleDateString('en-CA'),
       invoice_month: new Date().toISOString().split('T')[0].substring(0, 7),
+      installments: 1,
+      useInstallments: false,
     },
   });
 
@@ -81,24 +87,60 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
     form.setValue('invoice_month', newMonth);
   };
 
+  const calculateInstallmentAmount = (totalAmount: number, installments: number) => {
+    if (installments <= 0) return 0;
+    const installmentValue = totalAmount / installments;
+    return Number(installmentValue.toFixed(2));
+  };
+
   const onSubmit = async (data: DebtFormValues) => {
     try {
-      const { error } = await supabase
-        .from('debts')
-        .insert({
-          client_id: clientId,
-          amount: data.amount,
-          description: data.description,
-          transaction_date: data.transaction_date,
-          invoice_month: data.invoice_month ? `${data.invoice_month}-01` : null,
+      if (data.useInstallments && data.installments > 1) {
+        const installmentAmount = calculateInstallmentAmount(data.amount, data.installments);
+        const baseMonth = new Date(`${data.invoice_month}-01`);
+        
+        // Create an array of installment debts
+        const installmentDebts = Array.from({ length: data.installments }, (_, index) => {
+          const installmentMonth = addMonths(baseMonth, index);
+          return {
+            client_id: clientId,
+            amount: installmentAmount,
+            description: `${data.description || 'Parcela'} (${index + 1}/${data.installments})`,
+            transaction_date: data.transaction_date,
+            invoice_month: format(installmentMonth, 'yyyy-MM-dd'),
+          };
         });
 
-      if (error) throw error;
+        // Insert all installments
+        const { error } = await supabase
+          .from('debts')
+          .insert(installmentDebts);
 
-      toast({
-        title: "Débito criado com sucesso!",
-        description: `Débito de ${formatCurrency(data.amount)} adicionado para ${clientName}`,
-      });
+        if (error) throw error;
+
+        toast({
+          title: "Débito parcelado criado com sucesso!",
+          description: `${data.installments}x de ${formatCurrency(installmentAmount)} para ${clientName}`,
+        });
+      } else {
+        // Insert single debt
+        const { error } = await supabase
+          .from('debts')
+          .insert({
+            client_id: clientId,
+            amount: data.amount,
+            description: data.description,
+            transaction_date: data.transaction_date,
+            invoice_month: data.invoice_month ? `${data.invoice_month}-01` : null,
+          });
+
+        if (error) throw error;
+
+        toast({
+          title: "Débito criado com sucesso!",
+          description: `Débito de ${formatCurrency(data.amount)} adicionado para ${clientName}`,
+        });
+      }
 
       queryClient.invalidateQueries({ queryKey: ['clients'] });
       form.reset();
@@ -111,6 +153,12 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
       });
     }
   };
+
+  const watchAmount = form.watch('amount');
+  const watchInstallments = form.watch('installments');
+  const watchUseInstallments = form.watch('useInstallments');
+
+  const installmentAmount = calculateInstallmentAmount(watchAmount, watchInstallments);
 
   return (
     <Dialog>
@@ -126,30 +174,77 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-            <FormField
-              control={form.control}
-              name="amount"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Valor</FormLabel>
-                  <FormControl>
-                    <Input
-                      placeholder="R$ 0,00"
-                      inputMode="numeric"
-                      onChange={(e) => {
-                        let rawValue = e.target.value.replace(/\D/g, ""); // Remove caracteres não numéricos
-                        if (!rawValue) rawValue = "0"; // Mantém pelo menos um zero
-                        const formatted = formatCurrency(rawValue);
-                        field.onChange(parseCurrencyToNumber(formatted)); // Atualiza o estado apenas com o número
-                        e.target.value = formatted; // Atualiza a exibição formatada
-                      }}
-                      value={field.value ? formatCurrency((field.value * 100).toFixed(0)) : "R$ 0,00"}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
+            <div className="space-y-4">
+              <FormField
+                control={form.control}
+                name="amount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Valor</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="R$ 0,00"
+                        inputMode="numeric"
+                        onChange={(e) => {
+                          let rawValue = e.target.value.replace(/\D/g, "");
+                          if (!rawValue) rawValue = "0";
+                          const formatted = formatCurrency(rawValue);
+                          field.onChange(parseCurrencyToNumber(formatted));
+                          e.target.value = formatted;
+                        }}
+                        value={field.value ? formatCurrency((field.value * 100).toFixed(0)) : "R$ 0,00"}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="useInstallments"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                    <div className="space-y-0.5">
+                      <FormLabel className="text-base">Parcelar</FormLabel>
+                    </div>
+                    <FormControl>
+                      <Switch
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              {watchUseInstallments && (
+                <FormField
+                  control={form.control}
+                  name="installments"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Número de Parcelas</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="1"
+                          max="48"
+                          {...field}
+                        />
+                      </FormControl>
+                      {watchAmount > 0 && watchInstallments > 0 && (
+                        <p className="text-sm text-muted-foreground">
+                          {watchInstallments}x de {formatCurrency(installmentAmount)}
+                        </p>
+                      )}
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               )}
-            />
+            </div>
+
             <FormField
               control={form.control}
               name="description"
@@ -163,6 +258,7 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
                 </FormItem>
               )}
             />
+
             <FormField
               control={form.control}
               name="transaction_date"
@@ -176,6 +272,7 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
                 </FormItem>
               )}
             />
+
             <FormField
               control={form.control}
               name="invoice_month"
@@ -207,6 +304,7 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
                 </FormItem>
               )}
             />
+
             <Button type="submit" className="w-full">
               Criar Débito
             </Button>
