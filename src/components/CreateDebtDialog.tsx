@@ -46,21 +46,19 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
     defaultValues: {
       amount: 0,
       description: "",
-      transaction_date: new Date().toLocaleDateString('en-CA'), // This format returns YYYY-MM-DD
+      transaction_date: new Date().toLocaleDateString('en-CA'),
       invoice_month: new Date().toISOString().split('T')[0].substring(0, 7),
     },
   });
 
-  const formatCurrency = (value: string) => {
-    let numbers = value.replace(/\D/g, "");
-    if (!numbers) return "R$ 0,00";
-    const amount = parseFloat(numbers) / 100;
+  const formatCurrency = (value: string | number) => {
+    const numberValue = typeof value === 'string' ? parseCurrencyToNumber(value) : value;
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
       minimumFractionDigits: 2,
       maximumFractionDigits: 2,
-    }).format(amount);
+    }).format(numberValue);
   };
 
   const parseCurrencyToNumber = (value: string) => {
@@ -99,7 +97,7 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
 
       toast({
         title: "Débito criado com sucesso!",
-        description: `Débito de ${formatCurrency(data.amount.toString())} adicionado para ${clientName}`,
+        description: `Débito de ${formatCurrency(data.amount)} adicionado para ${clientName}`,
       });
 
       queryClient.invalidateQueries({ queryKey: ['clients'] });
@@ -129,29 +127,29 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
             <FormField
-  control={form.control}
-  name="amount"
-  render={({ field }) => (
-    <FormItem>
-      <FormLabel>Valor</FormLabel>
-      <FormControl>
-        <Input
-          placeholder="R$ 0,00"
-          inputMode="numeric"
-          onChange={(e) => {
-            let rawValue = e.target.value.replace(/\D/g, ""); // Remove caracteres não numéricos
-            if (!rawValue) rawValue = "0"; // Mantém pelo menos um zero
-            const formatted = formatCurrency(rawValue);
-            field.onChange(parseCurrencyToNumber(formatted)); // Atualiza o estado apenas com o número
-            e.target.value = formatted; // Atualiza a exibição formatada
-          }}
-          value={field.value ? formatCurrency((field.value * 100).toFixed(0)) : "R$ 0,00"}
-        />
-      </FormControl>
-      <FormMessage />
-    </FormItem>
-  )}
-/>
+              control={form.control}
+              name="amount"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Valor</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="R$ 0,00"
+                      inputMode="numeric"
+                      onChange={(e) => {
+                        let rawValue = e.target.value.replace(/\D/g, ""); // Remove caracteres não numéricos
+                        if (!rawValue) rawValue = "0"; // Mantém pelo menos um zero
+                        const formatted = formatCurrency(rawValue);
+                        field.onChange(parseCurrencyToNumber(formatted)); // Atualiza o estado apenas com o número
+                        e.target.value = formatted; // Atualiza a exibição formatada
+                      }}
+                      value={field.value ? formatCurrency((field.value * 100).toFixed(0)) : "R$ 0,00"}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
             <FormField
               control={form.control}
               name="description"
