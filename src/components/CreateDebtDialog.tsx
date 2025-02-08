@@ -1,3 +1,5 @@
+
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -24,7 +26,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQueryClient } from "@tanstack/react-query";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
-import { addMonths, format } from "date-fns";
+import { addMonths, format, parse } from "date-fns";
 
 const debtFormSchema = z.object({
   amount: z.coerce.number().min(0.01, "O valor deve ser maior que zero"),
@@ -97,7 +99,7 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
     try {
       if (data.useInstallments && data.installments > 1) {
         const installmentAmount = calculateInstallmentAmount(data.amount, data.installments);
-        const baseMonth = new Date(`${data.invoice_month}-01`);
+        const baseMonth = parse(`${data.invoice_month}-01`, 'yyyy-MM-dd', new Date());
         
         // Create an array of installment debts
         const installmentDebts = Array.from({ length: data.installments }, (_, index) => {
