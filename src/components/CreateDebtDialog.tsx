@@ -107,7 +107,7 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
             amount: installmentAmount,
             description: `${data.description || 'Parcela'} (${index + 1}/${data.installments})`,
             transaction_date: data.transaction_date,
-            invoice_month: format(installmentMonth, 'yyyy-MM-dd'),
+            invoice_month: format(installmentMonth, 'yyyy-MM-01'),
           };
         });
 
