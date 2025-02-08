@@ -104,10 +104,15 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
         // Create an array of installment debts
         const installmentDebts = Array.from({ length: data.installments }, (_, index) => {
           const installmentMonth = addMonths(baseMonth, index);
+          const originalAmountText = `(Origem - ${formatCurrency(data.amount)})`;
+          const description = data.description 
+            ? `${data.description} ${originalAmountText} (${index + 1}/${data.installments})`
+            : `Parcela ${originalAmountText} (${index + 1}/${data.installments})`;
+            
           return {
             client_id: clientId,
             amount: installmentAmount,
-            description: `${data.description || 'Parcela'} (${index + 1}/${data.installments})`,
+            description: description,
             transaction_date: data.transaction_date,
             invoice_month: format(installmentMonth, 'yyyy-MM-01'),
           };
