@@ -24,21 +24,50 @@ export function TransactionHistory({
   onDeleteTransaction,
 }: TransactionHistoryProps) {
   const handleGeneratePromissoryNote = (transaction: Transaction) => {
-    // Criar uma nova janela para impressão
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
     // Formatar o valor por extenso (simplificado para exemplo)
     const formatMoneyInWords = (value: number) => {
-      return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+      const formatter = new Intl.NumberFormat('pt-BR', {
+        style: 'currency',
+        currency: 'BRL',
+        minimumFractionDigits: 2,
+      });
+      
+      // Função auxiliar para converter números em palavras
+      const numberToWords = (num: number): string => {
+        const units = ['zero', 'um', 'dois', 'três', 'quatro', 'cinco', 'seis', 'sete', 'oito', 'nove'];
+        const teens = ['dez', 'onze', 'doze', 'treze', 'quatorze', 'quinze', 'dezesseis', 'dezessete', 'dezoito', 'dezenove'];
+        const tens = ['', '', 'vinte', 'trinta', 'quarenta', 'cinquenta', 'sessenta', 'setenta', 'oitenta', 'noventa'];
+        
+        if (num < 10) return units[num];
+        if (num < 20) return teens[num - 10];
+        if (num < 100) {
+          const digit = num % 10;
+          const ten = Math.floor(num / 10);
+          return digit === 0 ? tens[ten] : `${tens[ten]} e ${units[digit]}`;
+        }
+        return num.toString();
+      };
+
+      const [reais, centavos] = formatter.format(value)
         .replace('R$', '')
-        .trim();
+        .trim()
+        .split(',')
+        .map(part => parseInt(part.replace(/\D/g, '')));
+
+      const reaisText = numberToWords(reais);
+      const centavosText = numberToWords(centavos);
+
+      return `${reaisText} reais e ${centavosText} centavos`;
     };
 
     // Formatar a data por extenso
     const formatDateInWords = (date: string) => {
       const d = new Date(date);
-      return format(d, "dd 'de' MMMM 'de' yyyy", { locale: ptBR });
+      return format(d, "'UM' 'de' MMMM 'de' yyyy", { locale: ptBR })
+        .replace(/(^\w|\s\w)/g, letter => letter.toUpperCase());
     };
 
     // HTML da promissória
@@ -97,7 +126,7 @@ export function TransactionHistory({
           </div>
           <div class="content">
             <p>No dia ${formatDateInWords(transaction.invoice_month || new Date().toISOString())} pagaremos por esta única via de NOTA PROMISSÓRIA 
-            a ${clientName} ou à sua ordem a quantia de ${formatMoneyInWords(Number(transaction.amount))} 
+            a CLAUDELANE MARIA DA SILVA 10707874424 CNPJ 27.031.139/0001-59 ou à sua ordem a quantia de ${formatMoneyInWords(Number(transaction.amount))} 
             em moeda corrente deste país.</p>
             
             <p>Pagável em CARUARU</p>
