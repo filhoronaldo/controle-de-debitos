@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Transaction } from "@/types/transaction";
 import { ptBR } from "date-fns/locale";
+import { supabase } from "@/integrations/supabase/client";
+import { useEffect, useState } from "react";
 
 interface TransactionHistoryProps {
   isOpen: boolean;
@@ -16,6 +18,12 @@ interface TransactionHistoryProps {
   onDeleteTransaction: (transactionId: string) => void;
 }
 
+interface ClientDetails {
+  name: string;
+  document: string | null;
+  address: string | null;
+}
+
 export function TransactionHistory({
   isOpen,
   onOpenChange,
@@ -23,6 +31,26 @@ export function TransactionHistory({
   clientName,
   onDeleteTransaction,
 }: TransactionHistoryProps) {
+  const [clientDetails, setClientDetails] = useState<ClientDetails | null>(null);
+
+  useEffect(() => {
+    const fetchClientDetails = async () => {
+      if (transactions && transactions.length > 0) {
+        const { data } = await supabase
+          .from('clients')
+          .select('name, document, address')
+          .eq('name', clientName)
+          .single();
+        
+        if (data) {
+          setClientDetails(data);
+        }
+      }
+    };
+
+    fetchClientDetails();
+  }, [clientName, transactions]);
+
   const handleGeneratePromissoryNote = (transaction: Transaction) => {
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
@@ -131,9 +159,9 @@ export function TransactionHistory({
             
             <p>Pagável em CARUARU</p>
             
-            <p>Emitente: ____________________________<br>
-            CPF/CNPJ: ____________________________<br>
-            Endereço: ____________________________</p>
+            <p>Emitente: ${clientDetails?.name || '_____________________________'}<br>
+            CPF/CNPJ: ${clientDetails?.document || '_____________________________'}<br>
+            Endereço: ${clientDetails?.address || '_____________________________'}</p>
           </div>
           <div class="signature">
             Assinatura do Emitente
