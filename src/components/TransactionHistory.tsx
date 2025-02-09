@@ -56,6 +56,21 @@ export function TransactionHistory({
     const printWindow = window.open('', '_blank');
     if (!printWindow) return;
 
+    // Extrair informação de parcelamento da descrição
+    const getInstallmentInfo = (description: string | null): { current: number; total: number } => {
+      if (!description) return { current: 1, total: 1 };
+      
+      const match = description.match(/\((\d+)\/(\d+)\)$/);
+      if (!match) return { current: 1, total: 1 };
+      
+      return {
+        current: parseInt(match[1], 10),
+        total: parseInt(match[2], 10)
+      };
+    };
+
+    const installmentInfo = getInstallmentInfo(transaction.description);
+
     // Formatar o valor por extenso (simplificado para exemplo)
     const formatMoneyInWords = (value: number) => {
       const formatter = new Intl.NumberFormat('pt-BR', {
@@ -168,7 +183,7 @@ export function TransactionHistory({
             REPÚBLICA FEDERATIVA DO BRASIL
           </div>
           <div class="title">
-            NOTA PROMISSÓRIA Nº 1/1
+            NOTA PROMISSÓRIA Nº ${installmentInfo.current}/${installmentInfo.total}
           </div>
           <div class="value">
             Valor R$ ${transaction.amount}
