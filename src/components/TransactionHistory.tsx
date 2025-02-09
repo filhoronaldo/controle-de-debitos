@@ -1,4 +1,3 @@
-
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { FileText, Trash2 } from "lucide-react";
@@ -93,9 +92,12 @@ export function TransactionHistory({
 
     // Formatar a data por extenso
     const formatDateInWords = (date: string) => {
-      const d = new Date(date);
-      return format(d, "'UM' 'de' MMMM 'de' yyyy", { locale: ptBR })
-        .replace(/(^\w|\s\w)/g, letter => letter.toUpperCase());
+      const d = parseISO(date);
+      const day = format(d, 'd');
+      const month = format(d, 'MMMM', { locale: ptBR });
+      const year = format(d, 'yyyy');
+      
+      return `Um de ${month} de ${year}`;
     };
 
     // HTML da promissória
