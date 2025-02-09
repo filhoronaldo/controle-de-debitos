@@ -1,3 +1,4 @@
+
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { FileText, Trash2 } from "lucide-react";
@@ -21,6 +22,7 @@ interface ClientDetails {
   name: string;
   document: string | null;
   address: string | null;
+  invoice_day: number;
 }
 
 export function TransactionHistory({
@@ -37,7 +39,7 @@ export function TransactionHistory({
       if (transactions && transactions.length > 0) {
         const { data } = await supabase
           .from('clients')
-          .select('name, document, address')
+          .select('name, document, address, invoice_day')
           .eq('name', clientName)
           .single();
         
@@ -90,14 +92,31 @@ export function TransactionHistory({
       return `${reaisText} reais e ${centavosText} centavos`;
     };
 
+    // Formatar o dia por extenso
+    const numberToWords = (num: number): string => {
+      const units = ['zero', 'um', 'dois', 'três', 'quatro', 'cinco', 'seis', 'sete', 'oito', 'nove'];
+      const teens = ['dez', 'onze', 'doze', 'treze', 'quatorze', 'quinze', 'dezesseis', 'dezessete', 'dezoito', 'dezenove'];
+      const tens = ['', '', 'vinte', 'trinta', 'quarenta', 'cinquenta', 'sessenta', 'setenta', 'oitenta', 'noventa'];
+      
+      if (num < 10) return units[num];
+      if (num < 20) return teens[num - 10];
+      if (num < 100) {
+        const digit = num % 10;
+        const ten = Math.floor(num / 10);
+        return digit === 0 ? tens[ten] : `${tens[ten]} e ${units[digit]}`;
+      }
+      return num.toString();
+    };
+
     // Formatar a data por extenso
     const formatDateInWords = (date: string) => {
       const d = parseISO(date);
-      const day = format(d, 'd');
       const month = format(d, 'MMMM', { locale: ptBR });
       const year = format(d, 'yyyy');
+      const invoiceDay = clientDetails?.invoice_day || 1;
+      const dayInWords = numberToWords(invoiceDay);
       
-      return `Um de ${month} de ${year}`;
+      return `${dayInWords} de ${month} de ${year}`;
     };
 
     // HTML da promissória
