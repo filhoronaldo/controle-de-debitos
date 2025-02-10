@@ -49,21 +49,23 @@ export function ClientRow({
 
   if (isMobile) {
     return (
-      <div className="p-4 border-b last:border-b-0 space-y-3">
-        <div className="flex justify-between items-start">
+      <div className="p-4 border-b last:border-b-0">
+        <div className="flex justify-between items-start mb-3">
           <div>
             <p className="font-medium">{client.name}</p>
             <p className="text-sm text-muted-foreground">R$ {client.total_debt.toFixed(2)}</p>
           </div>
-          {getStatusBadge(client.status)}
+          <div>
+            {getStatusBadge(client.status)}
+          </div>
         </div>
-        <div className="flex flex-wrap gap-2">
+        <div className="grid grid-cols-2 gap-2">
           <CreateDebtDialog clientId={client.id} clientName={client.name} />
           <Button 
             variant="outline" 
             size="sm"
-            className="flex-1"
             onClick={() => onViewInvoice(client.id, client.name)}
+            className="w-full"
           >
             <CreditCard className="h-4 w-4 mr-1" />
             Faturas
@@ -71,8 +73,8 @@ export function ClientRow({
           <Button 
             variant="outline" 
             size="sm"
-            className="flex-1"
             onClick={() => onViewDetails(client.id, client.name)}
+            className="w-full"
           >
             <User className="h-4 w-4 mr-1" />
             Detalhes
@@ -80,8 +82,8 @@ export function ClientRow({
           <Button 
             variant="outline" 
             size="sm"
-            className="flex-1"
             onClick={() => onViewHistory(client.id, client.name)}
+            className="w-full"
           >
             <History className="h-4 w-4 mr-1" />
             Histórico

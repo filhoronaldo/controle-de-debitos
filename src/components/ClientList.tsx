@@ -223,7 +223,7 @@ export function ClientList() {
   return (
     <>
       {isMobile ? (
-        <div className="space-y-2 rounded-md border">
+        <div className="space-y-2">
           {clients?.map((client) => (
             <ClientRow
               key={client.id}
