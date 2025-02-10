@@ -1,3 +1,4 @@
+
 import { Table, TableBody, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,6 +11,7 @@ import { TransactionHistory } from "./TransactionHistory";
 import { ClientRow } from "./ClientRow";
 import { Client } from "@/types/client";
 import { Transaction } from "@/types/transaction";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 export function ClientList() {
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
@@ -18,6 +20,7 @@ export function ClientList() {
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const queryClient = useQueryClient();
+  const isMobile = useIsMobile();
   
   const { data: clients, isLoading } = useQuery({
     queryKey: ['clients'],
@@ -219,29 +222,43 @@ export function ClientList() {
 
   return (
     <>
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Cliente</TableHead>
-              <TableHead>Débito Total</TableHead>
-              <TableHead>Situação</TableHead>
-              <TableHead>Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {clients?.map((client) => (
-              <ClientRow
-                key={client.id}
-                client={client}
-                onViewInvoice={handleViewInvoice}
-                onViewDetails={handleViewDetails}
-                onViewHistory={handleViewHistory}
-              />
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+      {isMobile ? (
+        <div className="space-y-2 rounded-md border">
+          {clients?.map((client) => (
+            <ClientRow
+              key={client.id}
+              client={client}
+              onViewInvoice={handleViewInvoice}
+              onViewDetails={handleViewDetails}
+              onViewHistory={handleViewHistory}
+            />
+          ))}
+        </div>
+      ) : (
+        <div className="rounded-md border overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Cliente</TableHead>
+                <TableHead>Débito Total</TableHead>
+                <TableHead>Situação</TableHead>
+                <TableHead>Ações</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {clients?.map((client) => (
+                <ClientRow
+                  key={client.id}
+                  client={client}
+                  onViewInvoice={handleViewInvoice}
+                  onViewDetails={handleViewDetails}
+                  onViewHistory={handleViewHistory}
+                />
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
 
       <TransactionHistory
         isOpen={isHistoryOpen}

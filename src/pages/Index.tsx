@@ -1,3 +1,4 @@
+
 import { DashboardCard } from "@/components/DashboardCard";
 import { ClientList } from "@/components/ClientList";
 import { Button } from "@/components/ui/button";
@@ -7,20 +8,21 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { startOfDay, endOfDay } from "date-fns";
 import { formatCurrency } from "@/lib/utils";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 const Index = () => {
+  const isMobile = useIsMobile();
+
   // Query para buscar o total de débitos e pagamentos
   const { data: totalDebt } = useQuery({
     queryKey: ['total-debt'],
     queryFn: async () => {
-      // Busca total de débitos
       const { data: debts, error: debtsError } = await supabase
         .from('debts')
         .select('amount');
       
       if (debtsError) throw debtsError;
 
-      // Busca total de pagamentos
       const { data: payments, error: paymentsError } = await supabase
         .from('payments')
         .select('amount');
@@ -34,7 +36,6 @@ const Index = () => {
     }
   });
 
-  // Query para buscar o total de clientes
   const { data: totalClients } = useQuery({
     queryKey: ['total-clients'],
     queryFn: async () => {
@@ -47,7 +48,6 @@ const Index = () => {
     }
   });
 
-  // Query para buscar pagamentos do dia
   const { data: todayPayments } = useQuery({
     queryKey: ['today-payments'],
     queryFn: async () => {
@@ -65,13 +65,13 @@ const Index = () => {
   });
 
   return (
-    <div className="container mx-auto p-6 space-y-8 animate-fadeIn">
-      <div className="flex justify-between items-center">
-        <h1 className="text-3xl font-heading font-bold">Controle de Débitos</h1>
+    <div className="container mx-auto px-4 py-6 space-y-6 animate-fadeIn max-w-full md:max-w-7xl">
+      <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+        <h1 className="text-2xl md:text-3xl font-heading font-bold">Controle de Débitos</h1>
         <CreateClientDialog />
       </div>
 
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <DashboardCard
           title="Total de Débitos"
           value={formatCurrency(totalDebt || 0)}
@@ -95,12 +95,14 @@ const Index = () => {
       </div>
 
       <div className="space-y-4">
-        <div className="flex justify-between items-center">
+        <div className="flex flex-col md:flex-row justify-between items-center gap-4">
           <h2 className="text-xl font-heading font-semibold">Lista de Clientes</h2>
-          <Button variant="outline">
-            <Receipt className="h-4 w-4 mr-2" />
-            Exportar Relatório
-          </Button>
+          {!isMobile && (
+            <Button variant="outline" className="w-full md:w-auto">
+              <Receipt className="h-4 w-4 mr-2" />
+              Exportar Relatório
+            </Button>
+          )}
         </div>
         <ClientList />
       </div>
