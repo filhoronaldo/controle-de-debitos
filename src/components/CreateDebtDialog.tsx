@@ -170,28 +170,29 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm">
+        <Button variant="outline" size="sm" className="w-full md:w-auto">
           <PlusCircle className="h-4 w-4 mr-1" />
           Incluir Débito
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="w-[95vw] max-w-lg md:w-full p-4 md:p-6">
         <DialogHeader>
-          <DialogTitle>Novo Débito para {clientName}</DialogTitle>
+          <DialogTitle className="text-lg md:text-xl">Novo Débito para {clientName}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
             <div className="space-y-4">
               <FormField
                 control={form.control}
                 name="amount"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Valor</FormLabel>
+                    <FormLabel className="text-base">Valor</FormLabel>
                     <FormControl>
                       <Input
                         placeholder="R$ 0,00"
                         inputMode="numeric"
+                        className="text-lg md:text-base"
                         onChange={(e) => {
                           let rawValue = e.target.value.replace(/\D/g, "");
                           if (!rawValue) rawValue = "0";
@@ -231,17 +232,18 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
                   name="installments"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Número de Parcelas</FormLabel>
+                      <FormLabel className="text-base">Número de Parcelas</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
                           min="1"
                           max="48"
+                          className="text-lg md:text-base"
                           {...field}
                         />
                       </FormControl>
                       {watchAmount > 0 && watchInstallments > 0 && (
-                        <p className="text-sm text-muted-foreground">
+                        <p className="text-sm text-muted-foreground mt-2">
                           {watchInstallments}x de {formatCurrency(installmentAmount)}
                         </p>
                       )}
@@ -257,9 +259,13 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Descrição</FormLabel>
+                  <FormLabel className="text-base">Descrição</FormLabel>
                   <FormControl>
-                    <Textarea placeholder="Descrição do débito" {...field} />
+                    <Textarea 
+                      placeholder="Descrição do débito" 
+                      className="min-h-[80px] text-base"
+                      {...field} 
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -271,9 +277,13 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
               name="transaction_date"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Data da Transação</FormLabel>
+                  <FormLabel className="text-base">Data da Transação</FormLabel>
                   <FormControl>
-                    <Input type="date" {...field} />
+                    <Input 
+                      type="date" 
+                      className="text-lg md:text-base"
+                      {...field} 
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -285,7 +295,7 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
               name="invoice_month"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Mês/Ano da Fatura</FormLabel>
+                  <FormLabel className="text-base">Mês/Ano da Fatura</FormLabel>
                   <div className="flex items-center gap-2">
                     <Button
                       type="button"
@@ -296,7 +306,11 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
                       <ChevronLeft className="h-4 w-4" />
                     </Button>
                     <FormControl>
-                      <Input type="month" {...field} className="text-center" />
+                      <Input 
+                        type="month" 
+                        className="text-center text-lg md:text-base"
+                        {...field} 
+                      />
                     </FormControl>
                     <Button
                       type="button"
@@ -312,7 +326,7 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
               )}
             />
 
-            <Button type="submit" className="w-full">
+            <Button type="submit" className="w-full text-base py-6 md:py-4">
               Criar Débito
             </Button>
           </form>

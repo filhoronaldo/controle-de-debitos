@@ -190,15 +190,15 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="w-[95vw] max-w-3xl md:w-full p-4 md:p-6">
         <DialogHeader>
-          <div className="flex items-center justify-between">
-            <DialogTitle>Fatura - {clientName}</DialogTitle>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <DialogTitle className="text-lg md:text-xl">Fatura - {clientName}</DialogTitle>
             <div className="flex items-center gap-2">
               <Button variant="outline" size="icon" onClick={handlePreviousMonth}>
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              <span className="font-medium">
+              <span className="font-medium text-base md:text-sm min-w-32 text-center">
                 {format(currentMonth, "MMMM 'de' yyyy", { locale: ptBR })}
               </span>
               <Button variant="outline" size="icon" onClick={handleNextMonth}>
@@ -209,24 +209,18 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
         </DialogHeader>
 
         <div className="mt-6">
-          <div className="mb-4 flex justify-between items-center">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2 mb-2">
+          <div className="mb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div className="space-y-2 w-full md:w-auto">
+              <div className="flex flex-wrap gap-2 mb-2">
                 <Badge variant={getInvoiceStatus().variant}>
                   {getInvoiceStatus().label}
                 </Badge>
               </div>
-              <div className="text-sm text-muted-foreground">
-                Total Pendente: <span className="font-medium text-foreground">R$ {calculateTotals().pendingAmount.toFixed(2)}</span>
-              </div>
-              <div className="text-sm text-muted-foreground">
-                Total do Mês: <span className="font-medium text-foreground">R$ {calculateTotals().totalAmount.toFixed(2)}</span>
-              </div>
-              <div className="text-sm text-muted-foreground">
-                Total Pago: <span className="font-medium text-success">R$ {calculateTotals().totalPaid.toFixed(2)}</span>
-              </div>
-              <div className="text-sm text-muted-foreground">
-                Vencimento: <span className="font-medium text-foreground">{getDueDate()}</span>
+              <div className="text-base md:text-sm text-muted-foreground grid grid-cols-2 md:block gap-2">
+                <div>Total Pendente: <span className="font-medium text-foreground">R$ {calculateTotals().pendingAmount.toFixed(2)}</span></div>
+                <div>Total do Mês: <span className="font-medium text-foreground">R$ {calculateTotals().totalAmount.toFixed(2)}</span></div>
+                <div>Total Pago: <span className="font-medium text-success">R$ {calculateTotals().totalPaid.toFixed(2)}</span></div>
+                <div>Vencimento: <span className="font-medium text-foreground">{getDueDate()}</span></div>
               </div>
             </div>
             {firstPendingDebtId && (
@@ -235,7 +229,7 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
                 amount={calculateTotals().pendingAmount}
                 onPaymentComplete={handlePaymentComplete}
                 trigger={
-                  <Button>
+                  <Button className="w-full md:w-auto">
                     <Plus className="h-4 w-4 mr-2" />
                     Registrar Pagamento
                   </Button>
@@ -244,57 +238,59 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
             )}
           </div>
 
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Data</TableHead>
-                <TableHead>Descrição</TableHead>
-                <TableHead>Valor</TableHead>
-                <TableHead>Mês Referência</TableHead>
-                <TableHead>Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {invoiceData?.transactions?.map((transaction) => (
-                <TableRow 
-                  key={transaction.id}
-                  className={transaction.type === 'payment' ? 'bg-muted/30' : ''}
-                >
-                  <TableCell>
-                    {formatDate(transaction.date)}
-                  </TableCell>
-                  <TableCell>{transaction.description}</TableCell>
-                  <TableCell className={transaction.type === 'payment' ? 'text-success' : ''}>
-                    R$ {Math.abs(Number(transaction.amount)).toFixed(2)}
-                    {transaction.type === 'payment' && transaction.payment_method && 
-                      ` (${transaction.payment_method})`}
-                  </TableCell>
-                  <TableCell>
-                    {formatMonthYear(transaction.invoice_month)}
-                  </TableCell>
-                  <TableCell>
-                    {transaction.type === 'payment' && (
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDeletePayment(transaction.id)}
-                        className="text-destructive hover:text-destructive/90"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    )}
-                  </TableCell>
-                </TableRow>
-              ))}
-              {(!invoiceData?.transactions || invoiceData.transactions.length === 0) && (
+          <div className="rounded-md border overflow-x-auto max-h-[60vh] md:max-h-[50vh]">
+            <Table>
+              <TableHeader>
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-4">
-                    Nenhuma transação encontrada para este mês
-                  </TableCell>
+                  <TableHead className="text-base md:text-sm">Data</TableHead>
+                  <TableHead className="text-base md:text-sm">Descrição</TableHead>
+                  <TableHead className="text-base md:text-sm">Valor</TableHead>
+                  <TableHead className="text-base md:text-sm">Mês Referência</TableHead>
+                  <TableHead className="text-base md:text-sm">Ações</TableHead>
                 </TableRow>
-              )}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {invoiceData?.transactions?.map((transaction) => (
+                  <TableRow 
+                    key={transaction.id}
+                    className={transaction.type === 'payment' ? 'bg-muted/30' : ''}
+                  >
+                    <TableCell className="text-base md:text-sm">
+                      {formatDate(transaction.date)}
+                    </TableCell>
+                    <TableCell className="text-base md:text-sm whitespace-normal">{transaction.description}</TableCell>
+                    <TableCell className={`text-base md:text-sm ${transaction.type === 'payment' ? 'text-success' : ''}`}>
+                      R$ {Math.abs(Number(transaction.amount)).toFixed(2)}
+                      {transaction.type === 'payment' && transaction.payment_method && 
+                        ` (${transaction.payment_method})`}
+                    </TableCell>
+                    <TableCell className="text-base md:text-sm">
+                      {formatMonthYear(transaction.invoice_month)}
+                    </TableCell>
+                    <TableCell>
+                      {transaction.type === 'payment' && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeletePayment(transaction.id)}
+                          className="text-destructive hover:text-destructive/90"
+                        >
+                          <Trash2 className="h-5 w-5 md:h-4 md:w-4" />
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {(!invoiceData?.transactions || invoiceData.transactions.length === 0) && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-4 text-base md:text-sm">
+                      Nenhuma transação encontrada para este mês
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       </DialogContent>
     </Dialog>

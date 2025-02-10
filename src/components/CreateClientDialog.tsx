@@ -77,25 +77,29 @@ export function CreateClientDialog() {
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button className="bg-success hover:bg-success/90">
+        <Button className="bg-success hover:bg-success/90 w-full md:w-auto">
           <UserPlus className="h-4 w-4 mr-2" />
           Novo Cliente
         </Button>
       </DialogTrigger>
-      <DialogContent>
+      <DialogContent className="w-[95vw] max-w-lg md:w-full p-4 md:p-6">
         <DialogHeader>
-          <DialogTitle>Adicionar Novo Cliente</DialogTitle>
+          <DialogTitle className="text-lg md:text-xl">Adicionar Novo Cliente</DialogTitle>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
             <FormField
               control={form.control}
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Nome</FormLabel>
+                  <FormLabel className="text-base">Nome</FormLabel>
                   <FormControl>
-                    <Input placeholder="Nome do cliente" {...field} />
+                    <Input 
+                      placeholder="Nome do cliente" 
+                      className="text-lg md:text-base"
+                      {...field} 
+                    />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -106,11 +110,11 @@ export function CreateClientDialog() {
               name="phone"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Telefone</FormLabel>
+                  <FormLabel className="text-base">Telefone</FormLabel>
                   <FormControl>
                     <ReactInputMask
                       mask="(99) 99999-9999"
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 md:text-sm"
+                      className="flex h-12 md:h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-lg md:text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       placeholder="(00) 00000-0000"
                       {...field}
                     />
@@ -128,19 +132,30 @@ export function CreateClientDialog() {
                     <Checkbox
                       checked={field.value}
                       onCheckedChange={field.onChange}
+                      className="h-5 w-5 md:h-4 md:w-4"
                     />
                   </FormControl>
                   <div className="space-y-1 leading-none">
-                    <FormLabel>Este número é WhatsApp</FormLabel>
+                    <FormLabel className="text-base">Este número é WhatsApp</FormLabel>
                   </div>
                 </FormItem>
               )}
             />
-            <div className="flex justify-end gap-2">
-              <Button type="button" variant="outline" onClick={() => setOpen(false)}>
+            <div className="flex flex-col md:flex-row justify-end gap-2 pt-4">
+              <Button 
+                type="button" 
+                variant="outline" 
+                onClick={() => setOpen(false)}
+                className="w-full md:w-auto text-base py-6 md:py-4"
+              >
                 Cancelar
               </Button>
-              <Button type="submit">Adicionar Cliente</Button>
+              <Button 
+                type="submit"
+                className="w-full md:w-auto text-base py-6 md:py-4"
+              >
+                Adicionar Cliente
+              </Button>
             </div>
           </form>
         </Form>

@@ -213,76 +213,79 @@ export function TransactionHistory({
 
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="w-[95vw] max-w-3xl md:w-full p-4 md:p-6">
         <DialogHeader>
-          <DialogTitle>Histórico de Transações - {clientName}</DialogTitle>
+          <DialogTitle className="text-lg md:text-xl">Histórico de Transações - {clientName}</DialogTitle>
         </DialogHeader>
         <div className="mt-4">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Data</TableHead>
-                <TableHead>Descrição</TableHead>
-                <TableHead>Valor</TableHead>
-                <TableHead>Mês Referência</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Ações</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {transactions?.map((transaction) => (
-                <TableRow key={transaction.id}>
-                  <TableCell>
-                    {transaction.transaction_date ? 
-                      format(parseISO(transaction.transaction_date), 'dd/MM/yyyy') : 
-                      '-'
-                    }
-                  </TableCell>
-                  <TableCell>{transaction.description || '-'}</TableCell>
-                  <TableCell>R$ {Number(transaction.amount).toFixed(2)}</TableCell>
-                  <TableCell>
-                    {transaction.invoice_month ? 
-                      format(parseISO(transaction.invoice_month), 'MM/yyyy') : 
-                      '-'
-                    }
-                  </TableCell>
-                  <TableCell>
-                    <Badge
-                      variant={
-                        transaction.status === 'paga' ? 'success' :
-                        transaction.status === 'parcial' ? 'warning' :
-                        'secondary'
-                      }
-                    >
-                      {transaction.status === 'paga' ? 'Pago' :
-                       transaction.status === 'parcial' ? 'Parcial' :
-                       'Em Aberto'}
-                    </Badge>
-                  </TableCell>
-                  <TableCell>
-                    <div className="flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleGeneratePromissoryNote(transaction)}
-                        title="Gerar Promissória"
-                      >
-                        <FileText className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => onDeleteTransaction(transaction.id)}
-                        className="text-destructive hover:text-destructive/90"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </TableCell>
+          <div className="rounded-md border overflow-x-auto max-h-[70vh] md:max-h-[60vh]">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-base md:text-sm">Data</TableHead>
+                  <TableHead className="text-base md:text-sm">Descrição</TableHead>
+                  <TableHead className="text-base md:text-sm">Valor</TableHead>
+                  <TableHead className="text-base md:text-sm">Mês Referência</TableHead>
+                  <TableHead className="text-base md:text-sm">Status</TableHead>
+                  <TableHead className="text-base md:text-sm">Ações</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {transactions?.map((transaction) => (
+                  <TableRow key={transaction.id}>
+                    <TableCell className="text-base md:text-sm">
+                      {transaction.transaction_date ? 
+                        format(parseISO(transaction.transaction_date), 'dd/MM/yyyy') : 
+                        '-'
+                      }
+                    </TableCell>
+                    <TableCell className="text-base md:text-sm whitespace-normal">{transaction.description || '-'}</TableCell>
+                    <TableCell className="text-base md:text-sm">R$ {Number(transaction.amount).toFixed(2)}</TableCell>
+                    <TableCell className="text-base md:text-sm">
+                      {transaction.invoice_month ? 
+                        format(parseISO(transaction.invoice_month), 'MM/yyyy') : 
+                        '-'
+                      }
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={
+                          transaction.status === 'paga' ? 'success' :
+                          transaction.status === 'parcial' ? 'warning' :
+                          'secondary'
+                        }
+                        className="text-base md:text-sm"
+                      >
+                        {transaction.status === 'paga' ? 'Pago' :
+                         transaction.status === 'parcial' ? 'Parcial' :
+                         'Em Aberto'}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex gap-2">
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleGeneratePromissoryNote(transaction)}
+                          title="Gerar Promissória"
+                        >
+                          <FileText className="h-5 w-5 md:h-4 md:w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => onDeleteTransaction(transaction.id)}
+                          className="text-destructive hover:text-destructive/90"
+                        >
+                          <Trash2 className="h-5 w-5 md:h-4 md:w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </div>
         </div>
       </DialogContent>
     </Dialog>
