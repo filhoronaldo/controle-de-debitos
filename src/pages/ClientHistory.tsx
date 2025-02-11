@@ -2,7 +2,6 @@
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
@@ -137,24 +136,27 @@ export default function ClientHistory() {
   }
 
   return (
-    <div className="container mx-auto p-4 flex flex-col h-[calc(100vh-2rem)]">
-      <h1 className="text-2xl font-heading font-bold mb-4">
-        Histórico de Transações - {transactions?.clientName}
-      </h1>
+    <div className="flex flex-col min-h-[100dvh] bg-background">
+      <div className="sticky top-0 z-10 bg-background p-4 border-b">
+        <h1 className="text-xl font-heading font-bold truncate">
+          {transactions?.clientName}
+        </h1>
+        <p className="text-sm text-muted-foreground">Histórico de Transações</p>
+      </div>
 
-      <ScrollArea className="flex-1 rounded-md border">
-        <div className="space-y-4 p-4">
+      <ScrollArea className="flex-1 p-4">
+        <div className="max-w-md mx-auto space-y-3">
           {transactions?.transactions.map((transaction) => (
             <div 
               key={transaction.id}
-              className="bg-white rounded-lg shadow p-4 space-y-2"
+              className="bg-card rounded-lg shadow-sm border p-3 space-y-2"
             >
-              <div className="flex justify-between items-start">
+              <div className="flex items-start justify-between">
                 <div>
                   <p className="font-medium">
                     {format(new Date(transaction.created_at), "dd/MM/yyyy", { locale: ptBR })}
                   </p>
-                  <p className="text-sm text-muted-foreground">
+                  <p className="text-sm text-muted-foreground line-clamp-1">
                     {transaction.description || '-'}
                   </p>
                 </div>
@@ -163,6 +165,7 @@ export default function ClientHistory() {
                   size="icon"
                   onClick={() => handleGeneratePromissoryNote(transaction)}
                   title="Gerar Promissória"
+                  className="h-8 w-8"
                 >
                   <FileText className="h-4 w-4" />
                 </Button>
