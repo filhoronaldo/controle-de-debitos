@@ -1,4 +1,3 @@
-
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -156,8 +155,8 @@ export default function ClientHistory() {
         </div>
       </div>
 
-      <ScrollArea className="flex-1">
-        <div className="divide-y">
+      <ScrollArea className="flex-1 px-4">
+        <div className="space-y-4 py-4">
           {transactions?.transactions.map((transaction) => {
             const transactionDate = new Date(transaction.created_at);
             const formattedDate = format(transactionDate, "dd 'de' MMMM", { locale: ptBR });
@@ -165,43 +164,42 @@ export default function ClientHistory() {
             return (
               <div 
                 key={transaction.id}
-                className="flex items-center justify-between p-4 hover:bg-muted/50 transition-colors"
+                className="flex flex-col gap-4 bg-card rounded-lg p-4 shadow-sm"
               >
-                <div className="flex items-start gap-3">
-                  <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                    <ShoppingBag className="h-5 w-5 text-primary" />
-                  </div>
-                  <div className="min-w-0">
-                    <p className="text-sm text-muted-foreground">
-                      {formattedDate}
-                    </p>
-                    <p className="font-medium truncate">
-                      {transaction.description || 'Compra'}
-                    </p>
-                    <p className="text-sm text-muted-foreground">
-                      {transaction.invoice_month ? 
-                        format(new Date(transaction.invoice_month), "MMMM/yyyy", { locale: ptBR }) : 
-                        '-'
-                      }
-                    </p>
-                  </div>
-                </div>
-                
-                <div className="flex items-center gap-2">
-                  <div className="text-right">
-                    <p className="font-medium">
-                      R$ {Number(transaction.amount).toFixed(2)}
-                    </p>
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-3">
+                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                      <ShoppingBag className="h-5 w-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground">
+                        {formattedDate}
+                      </p>
+                      <p className="font-medium">
+                        {transaction.description || 'Compra'}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {transaction.invoice_month ? 
+                          format(new Date(transaction.invoice_month), "MMMM/yyyy", { locale: ptBR }) : 
+                          '-'
+                        }
+                      </p>
+                    </div>
                   </div>
                   <Button
                     variant="ghost"
                     size="icon"
                     onClick={() => handleGeneratePromissoryNote(transaction)}
                     title="Gerar Promissória"
-                    className="h-8 w-8 shrink-0"
+                    className="h-8 w-8"
                   >
                     <FileText className="h-4 w-4" />
                   </Button>
+                </div>
+                <div className="border-t pt-2">
+                  <p className="font-medium text-right">
+                    R$ {Number(transaction.amount).toFixed(2)}
+                  </p>
                 </div>
               </div>
             );
