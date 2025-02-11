@@ -7,6 +7,7 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
 import { FileText } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
 
 export default function ClientHistory() {
   const { clientId } = useParams();
@@ -136,51 +137,57 @@ export default function ClientHistory() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <h1 className="text-3xl font-heading font-bold">
+    <div className="container mx-auto p-4 flex flex-col h-[calc(100vh-2rem)]">
+      <h1 className="text-2xl font-heading font-bold mb-4">
         Histórico de Transações - {transactions?.clientName}
       </h1>
 
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Data</TableHead>
-              <TableHead>Descrição</TableHead>
-              <TableHead>Valor</TableHead>
-              <TableHead>Mês Fatura</TableHead>
-              <TableHead>Ações</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {transactions?.transactions.map((transaction) => (
-              <TableRow key={transaction.id}>
-                <TableCell>
-                  {format(new Date(transaction.created_at), "dd/MM/yyyy", { locale: ptBR })}
-                </TableCell>
-                <TableCell>{transaction.description || '-'}</TableCell>
-                <TableCell>R$ {Number(transaction.amount).toFixed(2)}</TableCell>
-                <TableCell>
+      <ScrollArea className="flex-1 rounded-md border">
+        <div className="space-y-4 p-4">
+          {transactions?.transactions.map((transaction) => (
+            <div 
+              key={transaction.id}
+              className="bg-white rounded-lg shadow p-4 space-y-2"
+            >
+              <div className="flex justify-between items-start">
+                <div>
+                  <p className="font-medium">
+                    {format(new Date(transaction.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                  </p>
+                  <p className="text-sm text-muted-foreground">
+                    {transaction.description || '-'}
+                  </p>
+                </div>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => handleGeneratePromissoryNote(transaction)}
+                  title="Gerar Promissória"
+                >
+                  <FileText className="h-4 w-4" />
+                </Button>
+              </div>
+              
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Valor:</span>
+                <span className="font-medium">
+                  R$ {Number(transaction.amount).toFixed(2)}
+                </span>
+              </div>
+              
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Mês Fatura:</span>
+                <span>
                   {transaction.invoice_month ? 
                     format(new Date(transaction.invoice_month), "MMMM/yyyy", { locale: ptBR }) : 
                     '-'
                   }
-                </TableCell>
-                <TableCell>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleGeneratePromissoryNote(transaction)}
-                    title="Gerar Promissória"
-                  >
-                    <FileText className="h-4 w-4" />
-                  </Button>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+      </ScrollArea>
     </div>
   );
 }
