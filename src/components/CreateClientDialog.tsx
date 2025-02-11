@@ -36,33 +36,34 @@ type CreateClientForm = z.infer<typeof formSchema>;
 export function CreateClientDialog() {
   const [open, setOpen] = useState(false);
   const { toast } = useToast();
+
   const form = useForm<CreateClientForm>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       is_whatsapp: true,
       name: "",
       phone: "",
-    }
+    },
   });
 
   const onSubmit = async (data: CreateClientForm) => {
     try {
       // Remove all non-numeric characters from phone before saving
-      const phoneNumbers = data.phone.replace(/\D/g, '');
-      
+      const phoneNumbers = data.phone.replace(/\D/g, "");
+
       const { error } = await supabase.from("clients").insert({
         name: data.name,
         phone: phoneNumbers,
         is_whatsapp: data.is_whatsapp,
       });
-      
+
       if (error) throw error;
 
       toast({
         title: "Cliente adicionado com sucesso!",
         description: `${data.name} foi cadastrado no sistema.`,
       });
-      
+
       setOpen(false);
       form.reset();
     } catch (error) {
@@ -82,77 +83,86 @@ export function CreateClientDialog() {
           Novo Cliente
         </Button>
       </DialogTrigger>
-      <DialogContent className="w-[95vw] max-w-lg md:w-full p-4 md:p-6">
+      <DialogContent className="max-h-[80vh] overflow-y-auto w-[95vw] max-w-lg p-4 md:p-6">
         <DialogHeader>
           <DialogTitle className="text-lg md:text-xl">Adicionar Novo Cliente</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
+            {/* Campo Nome */}
             <FormField
               control={form.control}
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-base">Nome</FormLabel>
+                  <FormLabel className="text-sm md:text-base">Nome</FormLabel>
                   <FormControl>
-                    <Input 
-                      placeholder="Nome do cliente" 
-                      className="text-lg md:text-base"
-                      {...field} 
+                    <Input
+                      placeholder="Nome do cliente"
+                      className="text-base md:text-sm"
+                      {...field}
                     />
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage className="text-xs text-destructive" />
                 </FormItem>
               )}
             />
+
+            {/* Campo Telefone */}
             <FormField
               control={form.control}
               name="phone"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-base">Telefone</FormLabel>
+                  <FormLabel className="text-sm md:text-base">Telefone</FormLabel>
                   <FormControl>
                     <ReactInputMask
                       mask="(99) 99999-9999"
-                      className="flex h-12 md:h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-lg md:text-base ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      className="flex h-12 w-full rounded-md border border-input bg-background px-3 py-2 text-base md:text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       placeholder="(00) 00000-0000"
                       {...field}
                     />
                   </FormControl>
-                  <FormMessage />
+                  <FormMessage className="text-xs text-destructive" />
                 </FormItem>
               )}
             />
+
+            {/* Campo WhatsApp */}
             <FormField
               control={form.control}
               name="is_whatsapp"
               render={({ field }) => (
-                <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                <FormItem className="flex flex-row items-center space-x-3 space-y-0">
                   <FormControl>
                     <Checkbox
                       checked={field.value}
                       onCheckedChange={field.onChange}
-                      className="h-5 w-5 md:h-4 md:w-4"
+                      className="h-5 w-5"
                     />
                   </FormControl>
                   <div className="space-y-1 leading-none">
-                    <FormLabel className="text-base">Este número é WhatsApp</FormLabel>
+                    <FormLabel className="text-sm md:text-base">
+                      Este número é WhatsApp
+                    </FormLabel>
                   </div>
                 </FormItem>
               )}
             />
+
+            {/* Botões de Ação */}
             <div className="flex flex-col md:flex-row justify-end gap-2 pt-4">
-              <Button 
-                type="button" 
-                variant="outline" 
+              <Button
+                type="button"
+                variant="outline"
                 onClick={() => setOpen(false)}
-                className="w-full md:w-auto text-base py-6 md:py-4"
+                className="w-full md:w-auto text-sm py-3 md:py-2"
               >
                 Cancelar
               </Button>
-              <Button 
+              <Button
                 type="submit"
-                className="w-full md:w-auto text-base py-6 md:py-4"
+                className="w-full md:w-auto text-sm py-3 md:py-2"
               >
                 Adicionar Cliente
               </Button>
