@@ -49,128 +49,123 @@ export function TransactionHistory({
   }, [clientName, transactions]);
 
   const handleGeneratePromissoryNote = (transaction: Transaction) => {
-    const printWindow = window.open("", "_blank");
-    if (!printWindow) return;
+  const printWindow = window.open("", "_blank");
+  if (!printWindow) return;
 
-    // Extrair informação de parcelamento da descrição
-    const getInstallmentInfo = (description: string | null): { current: number; total: number } => {
-      if (!description) return { current: 1, total: 1 };
-      const match = description.match(/\((\d+)\/(\d+)\)$/);
-      if (!match) return { current: 1, total: 1 };
-      return {
-        current: parseInt(match[1], 10),
-        total: parseInt(match[2], 10),
-      };
+  // Verificar dados essenciais
+  if (!clientDetails) {
+    console.error("Detalhes do cliente não encontrados.");
+    return;
+  }
+
+  if (!transaction) {
+    console.error("Transação inválida.");
+    return;
+  }
+
+  // Extrair informação de parcelamento da descrição
+  const getInstallmentInfo = (description: string | null): { current: number; total: number } => {
+    if (!description) return { current: 1, total: 1 };
+    const match = description.match(/\((\d+)\/(\d+)\)$/);
+    if (!match) return { current: 1, total: 1 };
+    return {
+      current: parseInt(match[1], 10),
+      total: parseInt(match[2], 10),
     };
-
-    const installmentInfo = getInstallmentInfo(transaction.description);
-
-    // Formatar o valor por extenso (simplificado para exemplo)
-    const formatMoneyInWords = (value: number) => {
-      const formatter = new Intl.NumberFormat("pt-BR", {
-        style: "currency",
-        currency: "BRL",
-        minimumFractionDigits: 2,
-      });
-
-      const numberToWords = (num: number): string => {
-        const units = [
-          "zero",
-          "um",
-          "dois",
-          "três",
-          "quatro",
-          "cinco",
-          "seis",
-          "sete",
-          "oito",
-          "nove",
-        ];
-        const teens = [
-          "dez",
-          "onze",
-          "doze",
-          "treze",
-          "quatorze",
-          "quinze",
-          "dezesseis",
-          "dezessete",
-          "dezoito",
-          "dezenove",
-        ];
-        const tens = [
-          "",
-          "",
-          "vinte",
-          "trinta",
-          "quarenta",
-          "cinquenta",
-          "sessenta",
-          "setenta",
-          "oitenta",
-          "noventa",
-        ];
-        if (num < 10) return units[num];
-        if (num < 20) return teens[num - 10];
-        if (num < 100) {
-          const digit = num % 10;
-          const ten = Math.floor(num / 10);
-          return digit === 0 ? tens[ten] : `${tens[ten]} e ${units[digit]}`;
-        }
-        return num.toString();
-      };
-
-      const [reais, centavos] = formatter
-        .format(value)
-        .replace("R$", "")
-        .trim()
-        .split(",")
-        .map((part) => parseInt(part.replace(/\D/g, "")));
-      const reaisText = numberToWords(reais);
-      const centavosText = numberToWords(centavos);
-      return `${reaisText} reais e ${centavosText} centavos`;
-    };
-
-    // Formatar o dia por extenso
-    const formatDateInWords = (date: string) => {
-      const d = parseISO(date);
-      const month = format(d, "MMMM", { locale: ptBR });
-      const year = format(d, "yyyy");
-      const invoiceDay = clientDetails?.invoice_day || 1;
-      const dayInWords = numberToWords(invoiceDay);
-      return `${dayInWords} de ${month} de ${year}`;
-    };
-
-    // HTML da promissória
-    const html = `
-      <!DOCTYPE html>
-      <html lang="pt-BR">
-      <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Nota Promissória</title>
-      </head>
-      <body>
-        <h1>Nota Promissória</h1>
-        <p><strong>REPÚBLICA FEDERATIVA DO BRASIL</strong></p>
-        <p><strong>NOTA PROMISSÓRIA Nº ${installmentInfo.current}/${installmentInfo.total}</strong></p>
-        <p><strong>Valor R$ ${transaction.amount}</strong></p>
-        <p>No dia ${formatDateInWords(transaction.invoice_month || new Date().toISOString())} pagaremos por esta única via de NOTA PROMISSÓRIA 
-        a CLAUDELANE MARIA DA SILVA 10707874424 CNPJ 27.031.139/0001-59 ou à sua ordem a quantia de ${formatMoneyInWords(Number(transaction.amount))} 
-        em moeda corrente deste país.</p>
-        <p>Pagável em CARUARU</p>
-        <p><strong>Emitente:</strong> ${clientDetails?.name || "	"}</p>
-        <p><strong>CPF/CNPJ:</strong> ${clientDetails?.document || "	"}</p>
-        <p><strong>Endereço:</strong> ${clientDetails?.address || "	"}</p>
-        <p><strong>Assinatura do Emitente</strong></p>
-      </body>
-      </html>
-    `;
-
-    printWindow.document.write(html);
-    printWindow.document.close();
   };
 
+  const installmentInfo = getInstallmentInfo(transaction.description);
+
+  // Formatar o valor por extenso
+  const formatMoneyInWords = (value: number) => {
+    const formatter = new Intl.NumberFormat("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+      minimumFractionDigits: 2,
+    });
+
+    const numberToWords = (num: number): string => {
+      const units = ["zero", "um", "dois", "três", "quatro", "cinco", "seis", "sete", "oito", "nove"];
+      const teens = ["dez", "onze", "doze", "treze", "quatorze", "quinze", "dezesseis", "dezessete", "dezoito", "dezenove"];
+      const tens = ["", "", "vinte", "trinta", "quarenta", "cinquenta", "sessenta", "setenta", "oitenta", "noventa"];
+      if (num < 10) return units[num];
+      if (num < 20) return teens[num - 10];
+      if (num < 100) {
+        const digit = num % 10;
+        const ten = Math.floor(num / 10);
+        return digit === 0 ? tens[ten] : `${tens[ten]} e ${units[digit]}`;
+      }
+      return num.toString();
+    };
+
+    const [reais, centavos] = formatter
+      .format(value)
+      .replace("R$", "")
+      .trim()
+      .split(",")
+      .map((part) => parseInt(part.replace(/\D/g, "")));
+    const reaisText = numberToWords(reais);
+    const centavosText = numberToWords(centavos);
+    return `${reaisText} reais e ${centavosText} centavos`;
+  };
+
+  // Formatar a data por extenso
+  const formatDateInWords = (date: string) => {
+    const d = parseISO(date);
+    const month = format(d, "MMMM", { locale: ptBR });
+    const year = format(d, "yyyy");
+    const invoiceDay = clientDetails?.invoice_day || 1;
+
+    const numberToWords = (num: number): string => {
+      const units = ["zero", "um", "dois", "três", "quatro", "cinco", "seis", "sete", "oito", "nove"];
+      const teens = ["dez", "onze", "doze", "treze", "quatorze", "quinze", "dezesseis", "dezessete", "dezoito", "dezenove"];
+      const tens = ["", "", "vinte", "trinta", "quarenta", "cinquenta", "sessenta", "setenta", "oitenta", "noventa"];
+      if (num < 10) return units[num];
+      if (num < 20) return teens[num - 10];
+      if (num < 100) {
+        const digit = num % 10;
+        const ten = Math.floor(num / 10);
+        return digit === 0 ? tens[ten] : `${tens[ten]} e ${units[digit]}`;
+      }
+      return num.toString();
+    };
+
+    const dayInWords = numberToWords(invoiceDay);
+    return `${dayInWords} de ${month} de ${year}`;
+  };
+
+  // Gerar o HTML
+  const html = `
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nota Promissória</title>
+</head>
+<body>
+  <h1>Nota Promissória</h1>
+  <p><strong>REPÚBLICA FEDERATIVA DO BRASIL</strong></p>
+  <p><strong>NOTA PROMISSÓRIA Nº ${installmentInfo.current}/${installmentInfo.total}</strong></p>
+  <p><strong>Valor R$ ${transaction.amount}</strong></p>
+  <p>
+    No dia ${formatDateInWords(transaction.invoice_month || new Date().toISOString())} pagaremos por esta única via de NOTA PROMISSÓRIA 
+    a CLAUDELANE MARIA DA SILVA 10707874424 CNPJ 27.031.139/0001-59 ou à sua ordem a quantia de ${formatMoneyInWords(Number(transaction.amount))} 
+    em moeda corrente deste país.
+  </p>
+  <p>Pagável em CARUARU</p>
+  <p><strong>Emitente:</strong> ${clientDetails?.name || "Não informado"}</p>
+  <p><strong>CPF/CNPJ:</strong> ${clientDetails?.document || "Não informado"}</p>
+  <p><strong>Endereço:</strong> ${clientDetails?.address || "Não informado"}</p>
+  <p><strong>Assinatura do Emitente</strong></p>
+</body>
+</html>
+`;
+
+  // Escrever o HTML na nova janela
+  printWindow.document.write(html);
+  printWindow.document.close();
+};
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[80vh] overflow-y-auto">
