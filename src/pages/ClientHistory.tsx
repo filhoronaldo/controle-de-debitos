@@ -136,7 +136,7 @@ export default function ClientHistory() {
   }
 
   return (
-    <div className="flex flex-col min-h-[100dvh] bg-background">
+    <div className="flex flex-col h-[100dvh] bg-background">
       <div className="sticky top-0 z-10 bg-background p-4 border-b">
         <h1 className="text-xl font-heading font-bold truncate">
           {transactions?.clientName}
@@ -144,19 +144,19 @@ export default function ClientHistory() {
         <p className="text-sm text-muted-foreground">Histórico de Transações</p>
       </div>
 
-      <ScrollArea className="flex-1 p-4">
-        <div className="max-w-md mx-auto space-y-3">
+      <ScrollArea className="flex-1">
+        <div className="p-4 space-y-3">
           {transactions?.transactions.map((transaction) => (
             <div 
               key={transaction.id}
-              className="bg-card rounded-lg shadow-sm border p-3 space-y-2"
+              className="bg-card rounded-lg shadow-sm border p-3 flex flex-col gap-2 w-full"
             >
-              <div className="flex items-start justify-between">
-                <div>
+              <div className="flex items-start justify-between w-full">
+                <div className="flex-1 min-w-0">
                   <p className="font-medium">
                     {format(new Date(transaction.created_at), "dd/MM/yyyy", { locale: ptBR })}
                   </p>
-                  <p className="text-sm text-muted-foreground line-clamp-1">
+                  <p className="text-sm text-muted-foreground break-words">
                     {transaction.description || '-'}
                   </p>
                 </div>
@@ -165,27 +165,29 @@ export default function ClientHistory() {
                   size="icon"
                   onClick={() => handleGeneratePromissoryNote(transaction)}
                   title="Gerar Promissória"
-                  className="h-8 w-8"
+                  className="h-8 w-8 shrink-0 ml-2"
                 >
                   <FileText className="h-4 w-4" />
                 </Button>
               </div>
               
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Valor:</span>
-                <span className="font-medium">
-                  R$ {Number(transaction.amount).toFixed(2)}
-                </span>
-              </div>
-              
-              <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Mês Fatura:</span>
-                <span>
-                  {transaction.invoice_month ? 
-                    format(new Date(transaction.invoice_month), "MMMM/yyyy", { locale: ptBR }) : 
-                    '-'
-                  }
-                </span>
+              <div className="w-full">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Valor:</span>
+                  <span className="font-medium">
+                    R$ {Number(transaction.amount).toFixed(2)}
+                  </span>
+                </div>
+                
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Mês Fatura:</span>
+                  <span>
+                    {transaction.invoice_month ? 
+                      format(new Date(transaction.invoice_month), "MMMM/yyyy", { locale: ptBR }) : 
+                      '-'
+                    }
+                  </span>
+                </div>
               </div>
             </div>
           ))}
