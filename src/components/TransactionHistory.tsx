@@ -223,23 +223,23 @@ export function TransactionHistory({
                 </Badge>
               </div>
               <div className="flex justify-end space-x-2 mt-4">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleGeneratePromissoryNote(transaction)}
-                  title="Gerar Promissória"
-                >
-                  <FileText className="h-4 w-4" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  onClick={() => onDeleteTransaction(transaction.id)}
-                  className="text-destructive hover:text-destructive/90"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
+  <Button
+    size="sm"
+    variant="outline"
+    onClick={() => handleGeneratePromissoryNote(transaction)}
+    title="Gerar Promissória"
+  >
+    <FileText className="h-4 w-4" />
+  </Button>
+  <Button
+    size="sm"
+    variant="destructive"
+    onClick={() => onDeleteTransaction(transaction.id)}
+    className="ml-2"
+  >
+    <Trash2 className="h-4 w-4" />
+  </Button>
+</div>
             </div>
           ))}
         </div>
