@@ -49,101 +49,120 @@ export function TransactionHistory({
   }, [clientName, transactions]);
 
   const handleGeneratePromissoryNote = (transaction: Transaction) => {
-  const printWindow = window.open("", "_blank");
-  if (!printWindow) return;
+    const printWindow = window.open("", "_blank");
+    if (!printWindow) return;
 
-  // Verificar dados essenciais
-  if (!clientDetails) {
-    console.error("Detalhes do cliente não encontrados.");
-    return;
-  }
+    // Verificar dados essenciais
+    if (!clientDetails) {
+      console.error("Detalhes do cliente não encontrados.");
+      return;
+    }
 
-  if (!transaction) {
-    console.error("Transação inválida.");
-    return;
-  }
+    if (!transaction) {
+      console.error("Transação inválida.");
+      return;
+    }
 
-  // Extrair informação de parcelamento da descrição
-  const getInstallmentInfo = (description: string | null): { current: number; total: number } => {
-    if (!description) return { current: 1, total: 1 };
-    const match = description.match(/\((\d+)\/(\d+)\)$/);
-    if (!match) return { current: 1, total: 1 };
-    return {
-      current: parseInt(match[1], 10),
-      total: parseInt(match[2], 10),
-    };
-  };
-
-  const installmentInfo = getInstallmentInfo(transaction.description);
-
-  // Formatar o valor por extenso
-  const formatMoneyInWords = (value: number) => {
-    const formatter = new Intl.NumberFormat("pt-BR", {
-      style: "currency",
-      currency: "BRL",
-      minimumFractionDigits: 2,
-    });
-
-    const numberToWords = (num: number): string => {
-      const units = ["zero", "um", "dois", "três", "quatro", "cinco", "seis", "sete", "oito", "nove"];
-      const teens = ["dez", "onze", "doze", "treze", "quatorze", "quinze", "dezesseis", "dezessete", "dezoito", "dezenove"];
-      const tens = ["", "", "vinte", "trinta", "quarenta", "cinquenta", "sessenta", "setenta", "oitenta", "noventa"];
-      if (num < 10) return units[num];
-      if (num < 20) return teens[num - 10];
-      if (num < 100) {
-        const digit = num % 10;
-        const ten = Math.floor(num / 10);
-        return digit === 0 ? tens[ten] : `${tens[ten]} e ${units[digit]}`;
-      }
-      return num.toString();
+    // Extrair informação de parcelamento da descrição
+    const getInstallmentInfo = (description: string | null): { current: number; total: number } => {
+      if (!description) return { current: 1, total: 1 };
+      const match = description.match(/\((\d+)\/(\d+)\)$/);
+      if (!match) return { current: 1, total: 1 };
+      return {
+        current: parseInt(match[1], 10),
+        total: parseInt(match[2], 10),
+      };
     };
 
-    const [reais, centavos] = formatter
-      .format(value)
-      .replace("R$", "")
-      .trim()
-      .split(",")
-      .map((part) => parseInt(part.replace(/\D/g, "")));
-    const reaisText = numberToWords(reais);
-    const centavosText = numberToWords(centavos);
-    return `${reaisText} reais e ${centavosText} centavos`;
-  };
+    const installmentInfo = getInstallmentInfo(transaction.description);
 
-  // Formatar a data por extenso
-  const formatDateInWords = (date: string) => {
-    const d = parseISO(date);
-    const month = format(d, "MMMM", { locale: ptBR });
-    const year = format(d, "yyyy");
-    const invoiceDay = clientDetails?.invoice_day || 1;
+    // Formatar o valor por extenso
+    const formatMoneyInWords = (value: number) => {
+      const formatter = new Intl.NumberFormat("pt-BR", {
+        style: "currency",
+        currency: "BRL",
+        minimumFractionDigits: 2,
+      });
 
-    const numberToWords = (num: number): string => {
-      const units = ["zero", "um", "dois", "três", "quatro", "cinco", "seis", "sete", "oito", "nove"];
-      const teens = ["dez", "onze", "doze", "treze", "quatorze", "quinze", "dezesseis", "dezessete", "dezoito", "dezenove"];
-      const tens = ["", "", "vinte", "trinta", "quarenta", "cinquenta", "sessenta", "setenta", "oitenta", "noventa"];
-      if (num < 10) return units[num];
-      if (num < 20) return teens[num - 10];
-      if (num < 100) {
-        const digit = num % 10;
-        const ten = Math.floor(num / 10);
-        return digit === 0 ? tens[ten] : `${tens[ten]} e ${units[digit]}`;
-      }
-      return num.toString();
+      const numberToWords = (num: number): string => {
+        const units = ["zero", "um", "dois", "três", "quatro", "cinco", "seis", "sete", "oito", "nove"];
+        const teens = ["dez", "onze", "doze", "treze", "quatorze", "quinze", "dezesseis", "dezessete", "dezoito", "dezenove"];
+        const tens = ["", "", "vinte", "trinta", "quarenta", "cinquenta", "sessenta", "setenta", "oitenta", "noventa"];
+        if (num < 10) return units[num];
+        if (num < 20) return teens[num - 10];
+        if (num < 100) {
+          const digit = num % 10;
+          const ten = Math.floor(num / 10);
+          return digit === 0 ? tens[ten] : `${tens[ten]} e ${units[digit]}`;
+        }
+        return num.toString();
+      };
+
+      const [reais, centavos] = formatter
+        .format(value)
+        .replace("R$", "")
+        .trim()
+        .split(",")
+        .map((part) => parseInt(part.replace(/\D/g, "")));
+      const reaisText = numberToWords(reais);
+      const centavosText = numberToWords(centavos);
+      return `${reaisText} reais e ${centavosText} centavos`;
     };
 
-    const dayInWords = numberToWords(invoiceDay);
-    return `${dayInWords} de ${month} de ${year}`;
-  };
+    // Formatar a data por extenso
+    const formatDateInWords = (date: string) => {
+      const d = parseISO(date);
+      const month = format(d, "MMMM", { locale: ptBR });
+      const year = format(d, "yyyy");
+      const invoiceDay = clientDetails?.invoice_day || 1;
 
-  // Gerar o HTML
-  const html = `
+      const numberToWords = (num: number): string => {
+        const units = ["zero", "um", "dois", "três", "quatro", "cinco", "seis", "sete", "oito", "nove"];
+        const teens = ["dez", "onze", "doze", "treze", "quatorze", "quinze", "dezesseis", "dezessete", "dezoito", "dezenove"];
+        const tens = ["", "", "vinte", "trinta", "quarenta", "cinquenta", "sessenta", "setenta", "oitenta", "noventa"];
+        if (num < 10) return units[num];
+        if (num < 20) return teens[num - 10];
+        if (num < 100) {
+          const digit = num % 10;
+          const ten = Math.floor(num / 10);
+          return digit === 0 ? tens[ten] : `${tens[ten]} e ${units[digit]}`;
+        }
+        return num.toString();
+      };
+
+      const dayInWords = numberToWords(invoiceDay);
+      return `${dayInWords} de ${month} de ${year}`;
+    };
+
+    // Gerar o HTML
+    const html = `
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Nota Promissória</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      line-height: 1.6;
+    }
+    h1 {
+      text-align: center;
+    }
+    hr {
+      border: none;
+      border-top: 1px solid black;
+      margin: 20px 0;
+    }
+    .signature-line {
+      margin-top: 40px;
+      text-align: center;
+    }
+  </style>
 </head>
-<body>
+<body onload="window.print()">
   <h1>Nota Promissória</h1>
   <p><strong>REPÚBLICA FEDERATIVA DO BRASIL</strong></p>
   <p><strong>NOTA PROMISSÓRIA Nº ${installmentInfo.current}/${installmentInfo.total}</strong></p>
@@ -157,15 +176,19 @@ export function TransactionHistory({
   <p><strong>Emitente:</strong> ${clientDetails?.name || "Não informado"}</p>
   <p><strong>CPF/CNPJ:</strong> ${clientDetails?.document || "Não informado"}</p>
   <p><strong>Endereço:</strong> ${clientDetails?.address || "Não informado"}</p>
-  <p><strong>Assinatura do Emitente</strong></p>
+  <div class="signature-line">
+    <hr>
+    <p>Assinatura do Emitente</p>
+  </div>
 </body>
 </html>
 `;
 
-  // Escrever o HTML na nova janela
-  printWindow.document.write(html);
-  printWindow.document.close();
-};
+    // Escrever o HTML na nova janela
+    printWindow.document.write(html);
+    printWindow.document.close();
+  };
+
   return (
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[80vh] overflow-y-auto">
@@ -218,23 +241,23 @@ export function TransactionHistory({
                 </Badge>
               </div>
               <div className="flex justify-end space-x-2 mt-4">
-  <Button
-    size="sm"
-    variant="outline"
-    onClick={() => handleGeneratePromissoryNote(transaction)}
-    title="Gerar Promissória"
-  >
-    <FileText className="h-4 w-4" />
-  </Button>
-  <Button
-    size="sm"
-    variant="destructive"
-    onClick={() => onDeleteTransaction(transaction.id)}
-    className="ml-2"
-  >
-    <Trash2 className="h-4 w-4" />
-  </Button>
-</div>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => handleGeneratePromissoryNote(transaction)}
+                  title="Gerar Promissória"
+                >
+                  <FileText className="h-4 w-4" />
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={() => onDeleteTransaction(transaction.id)}
+                  className="ml-2"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
           ))}
         </div>
