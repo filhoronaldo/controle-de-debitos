@@ -27,11 +27,13 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
     queryFn: async () => {
       const startDate = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
       const endDate = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
+      
       const { data: client } = await supabase
         .from('clients')
         .select('invoice_day')
         .eq('id', clientId)
         .single();
+
       const { data: debts, error: debtsError } = await supabase
         .from('debts')
         .select(`
@@ -42,10 +44,12 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
         .gte('invoice_month', startDate)
         .lte('invoice_month', endDate)
         .order('invoice_month', { ascending: true });
+
       if (debtsError) {
         toast.error('Erro ao carregar faturas');
         throw debtsError;
       }
+
       const transactions = debts.reduce((acc: any[], debt: any) => {
         acc.push({
           id: debt.id,
@@ -53,8 +57,9 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
           description: debt.description,
           amount: debt.amount,
           type: 'debt',
-          invoice_month: debt.invoice_month,
+          invoice_month: debt.invoice_month
         });
+
         if (debt.payments) {
           debt.payments.forEach((payment: any) => {
             acc.push({
@@ -64,19 +69,21 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
               amount: -payment.amount,
               type: 'payment',
               payment_method: payment.payment_method,
-              invoice_month: payment.invoice_month,
+              invoice_month: payment.invoice_month
             });
           });
         }
+
         return acc;
       }, []);
+
       return {
         invoiceDay: client?.invoice_day || 1,
-        transactions: transactions.sort((a: any, b: any) =>
+        transactions: transactions.sort((a: any, b: any) => 
           new Date(a.date).getTime() - new Date(b.date).getTime()
-        ),
+        )
       };
-    },
+    }
   });
 
   const deletePayment = useMutation({
@@ -85,6 +92,7 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
         .from('payments')
         .delete()
         .eq('id', paymentId);
+      
       if (error) throw error;
     },
     onSuccess: () => {
@@ -94,7 +102,7 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
     },
     onError: () => {
       toast.error('Erro ao excluir pagamento');
-    },
+    }
   });
 
   useEffect(() => {
@@ -105,6 +113,7 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
 
   const calculateTotals = () => {
     if (!invoiceData?.transactions) return { totalAmount: 0, totalPaid: 0, pendingAmount: 0 };
+
     const totals = invoiceData.transactions.reduce((acc, transaction) => {
       if (transaction.type === 'debt') {
         acc.totalAmount += Number(transaction.amount);
@@ -113,9 +122,10 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
       }
       return acc;
     }, { totalAmount: 0, totalPaid: 0 });
+
     return {
       ...totals,
-      pendingAmount: totals.totalAmount - totals.totalPaid,
+      pendingAmount: totals.totalAmount - totals.totalPaid
     };
   };
 
@@ -129,6 +139,7 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
     const { totalAmount, totalPaid } = calculateTotals();
     const dueDate = getDueDate();
     const isPastDue = dueDate ? isBefore(new Date(parseISO(format(setDate(currentMonth, invoiceData?.invoiceDay || 1), 'yyyy-MM-dd'))), new Date()) : false;
+
     if (totalPaid >= totalAmount) {
       return { label: "Paga", variant: "outline" as const };
     }
@@ -179,74 +190,106 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[80vh] overflow-y-auto w-[95vw] max-w-lg p-4 md:p-6">
+      <DialogContent className="w-[95vw] max-w-3xl md:w-full p-4 md:p-6">
         <DialogHeader>
-          <DialogTitle className="text-lg md:text-xl">Fatura - {clientName}</DialogTitle>
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <DialogTitle className="text-lg md:text-xl">Fatura - {clientName}</DialogTitle>
+            <div className="flex items-center gap-2">
+              <Button variant="outline" size="icon" onClick={handlePreviousMonth}>
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <span className="font-medium text-base md:text-sm min-w-32 text-center">
+                {format(currentMonth, "MMMM 'de' yyyy", { locale: ptBR })}
+              </span>
+              <Button variant="outline" size="icon" onClick={handleNextMonth}>
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
         </DialogHeader>
-        <div className="space-y-4">
-          <div className="flex justify-between items-center">
-            <Button size="sm" variant="outline" onClick={handlePreviousMonth}>
-              <ChevronLeft className="h-4 w-4" />
-            </Button>
-            <span className="text-lg font-medium">{format(currentMonth, "MMMM 'de' yyyy", { locale: ptBR })}</span>
-            <Button size="sm" variant="outline" onClick={handleNextMonth}>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </div>
-          <div className="space-y-2">
-            <p>
-              <strong>Status:</strong> <Badge variant={getInvoiceStatus().variant}>{getInvoiceStatus().label}</Badge>
-            </p>
-            <p><strong>Total Pendente:</strong> R$ {calculateTotals().pendingAmount.toFixed(2)}</p>
-            <p><strong>Total do Mês:</strong> R$ {calculateTotals().totalAmount.toFixed(2)}</p>
-            <p><strong>Total Pago:</strong> R$ {calculateTotals().totalPaid.toFixed(2)}</p>
-            <p><strong>Vencimento:</strong> {getDueDate()}</p>
-          </div>
-          {firstPendingDebtId && (
-            <CreatePaymentDialog
-              debtId={firstPendingDebtId}
-              clientId={clientId}
-              clientName={clientName}
-              onPaymentComplete={handlePaymentComplete}
-            />
-          )}
-          <div className="space-y-4">
-            {invoiceData?.transactions?.length > 0 ? (
-              invoiceData.transactions.map((transaction) => (
-                <div key={transaction.id} className="bg-background p-4 rounded-lg shadow-sm border">
-                  <div className="flex justify-between">
-                    <span className="text-sm font-medium">Data:</span>
-                    <span className="text-sm">{formatDate(transaction.date)}</span>
-                  </div>
-                  <div className="flex justify-between mt-2">
-                    <span className="text-sm font-medium">Descrição:</span>
-                    <span className="text-sm">{transaction.description}</span>
-                  </div>
-                  <div className="flex justify-between mt-2">
-                    <span className="text-sm font-medium">Valor:</span>
-                    <span className="text-sm">R$ {Math.abs(Number(transaction.amount)).toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between mt-2">
-                    <span className="text-sm font-medium">Mês Referência:</span>
-                    <span className="text-sm">{formatMonthYear(transaction.invoice_month)}</span>
-                  </div>
-                  {transaction.type === 'payment' && (
-                    <div className="flex justify-end mt-4">
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => handleDeletePayment(transaction.id)}
-                        className="ml-2"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  )}
-                </div>
-              ))
-            ) : (
-              <p>Nenhuma transação encontrada para este mês</p>
+
+        <div className="mt-6">
+          <div className="mb-4 flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+            <div className="space-y-2 w-full md:w-auto">
+              <div className="flex flex-wrap gap-2 mb-2">
+                <Badge variant={getInvoiceStatus().variant}>
+                  {getInvoiceStatus().label}
+                </Badge>
+              </div>
+              <div className="text-base md:text-sm text-muted-foreground grid grid-cols-2 md:block gap-2">
+                <div>Total Pendente: <span className="font-medium text-foreground">R$ {calculateTotals().pendingAmount.toFixed(2)}</span></div>
+                <div>Total do Mês: <span className="font-medium text-foreground">R$ {calculateTotals().totalAmount.toFixed(2)}</span></div>
+                <div>Total Pago: <span className="font-medium text-success">R$ {calculateTotals().totalPaid.toFixed(2)}</span></div>
+                <div>Vencimento: <span className="font-medium text-foreground">{getDueDate()}</span></div>
+              </div>
+            </div>
+            {firstPendingDebtId && (
+              <CreatePaymentDialog 
+                debtId={firstPendingDebtId} 
+                amount={calculateTotals().pendingAmount}
+                onPaymentComplete={handlePaymentComplete}
+                trigger={
+                  <Button className="w-full md:w-auto">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Registrar Pagamento
+                  </Button>
+                }
+              />
             )}
+          </div>
+
+          <div className="rounded-md border overflow-x-auto max-h-[60vh] md:max-h-[50vh]">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="text-base md:text-sm">Data</TableHead>
+                  <TableHead className="text-base md:text-sm">Descrição</TableHead>
+                  <TableHead className="text-base md:text-sm">Valor</TableHead>
+                  <TableHead className="text-base md:text-sm">Mês Referência</TableHead>
+                  <TableHead className="text-base md:text-sm">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {invoiceData?.transactions?.map((transaction) => (
+                  <TableRow 
+                    key={transaction.id}
+                    className={transaction.type === 'payment' ? 'bg-muted/30' : ''}
+                  >
+                    <TableCell className="text-base md:text-sm">
+                      {formatDate(transaction.date)}
+                    </TableCell>
+                    <TableCell className="text-base md:text-sm whitespace-normal">{transaction.description}</TableCell>
+                    <TableCell className={`text-base md:text-sm ${transaction.type === 'payment' ? 'text-success' : ''}`}>
+                      R$ {Math.abs(Number(transaction.amount)).toFixed(2)}
+                      {transaction.type === 'payment' && transaction.payment_method && 
+                        ` (${transaction.payment_method})`}
+                    </TableCell>
+                    <TableCell className="text-base md:text-sm">
+                      {formatMonthYear(transaction.invoice_month)}
+                    </TableCell>
+                    <TableCell>
+                      {transaction.type === 'payment' && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeletePayment(transaction.id)}
+                          className="text-destructive hover:text-destructive/90"
+                        >
+                          <Trash2 className="h-5 w-5 md:h-4 md:w-4" />
+                        </Button>
+                      )}
+                    </TableCell>
+                  </TableRow>
+                ))}
+                {(!invoiceData?.transactions || invoiceData.transactions.length === 0) && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="text-center py-4 text-base md:text-sm">
+                      Nenhuma transação encontrada para este mês
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
           </div>
         </div>
       </DialogContent>
