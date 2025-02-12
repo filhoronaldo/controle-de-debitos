@@ -9,7 +9,7 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      clients: {
+      lb_clients: {
         Row: {
           address: string | null
           city: string | null
@@ -51,7 +51,7 @@ export type Database = {
         }
         Relationships: []
       }
-      debts: {
+      lb_debts: {
         Row: {
           amount: number
           client_id: string
@@ -87,15 +87,15 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "debts_client_id_fkey"
+            foreignKeyName: "lb_debts_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
-            referencedRelation: "clients"
+            referencedRelation: "lb_clients"
             referencedColumns: ["id"]
-          },
+          }
         ]
       }
-      payments: {
+      lb_payments: {
         Row: {
           amount: number
           created_at: string
@@ -125,12 +125,12 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "payments_debt_id_fkey"
+            foreignKeyName: "lb_payments_debt_id_fkey"
             columns: ["debt_id"]
             isOneToOne: false
-            referencedRelation: "debts"
+            referencedRelation: "lb_debts"
             referencedColumns: ["id"]
-          },
+          }
         ]
       }
     }
@@ -148,8 +148,6 @@ export type Database = {
     }
   }
 }
-
-type PublicSchema = Database[Extract<keyof Database, "public">]
 
 export type Tables<
   PublicTableNameOrOptions extends
@@ -230,6 +228,8 @@ export type Enums<
   : PublicEnumNameOrOptions extends keyof PublicSchema["Enums"]
     ? PublicSchema["Enums"][PublicEnumNameOrOptions]
     : never
+
+type PublicSchema = Database[Extract<keyof Database, "public">]
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
