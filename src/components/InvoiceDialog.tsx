@@ -1,4 +1,5 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -6,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format, parseISO, startOfMonth, endOfMonth, addMonths, subMonths, setDate, isBefore } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useState, useEffect } from "react";
+import { CreatePaymentDialog } from "./CreatePaymentDialog";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 
@@ -158,6 +160,8 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
     }
   };
 
+  const firstPendingDebtId = invoiceData?.transactions?.find(t => t.type === 'debt')?.id || null;
+
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
     const timezoneOffset = date.getTimezoneOffset() * 60000;
@@ -175,9 +179,9 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[80vh] overflow-y-auto">
+      <DialogContent className="max-h-[80vh] overflow-y-auto w-[95vw] max-w-lg p-4 md:p-6">
         <DialogHeader>
-          <DialogTitle>Fatura - {clientName}</DialogTitle>
+          <DialogTitle className="text-lg md:text-xl">Fatura - {clientName}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4">
           <div className="flex justify-between items-center">
@@ -198,6 +202,14 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
             <p><strong>Total Pago:</strong> R$ {calculateTotals().totalPaid.toFixed(2)}</p>
             <p><strong>Vencimento:</strong> {getDueDate()}</p>
           </div>
+          {firstPendingDebtId && (
+            <CreatePaymentDialog
+              debtId={firstPendingDebtId}
+              clientId={clientId}
+              clientName={clientName}
+              onPaymentComplete={handlePaymentComplete}
+            />
+          )}
           <div className="space-y-4">
             {invoiceData?.transactions?.length > 0 ? (
               invoiceData.transactions.map((transaction) => (
