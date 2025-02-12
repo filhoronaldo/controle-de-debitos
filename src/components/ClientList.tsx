@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
@@ -23,18 +22,18 @@ export function ClientList() {
     queryKey: ['clients'],
     queryFn: async () => {
       const { data: clientsData, error: clientsError } = await supabase
-        .from('clients')
+        .from('lb_clients')
         .select(`
           id,
           name,
           invoice_day,
-          debts (
+          lb_debts (
             amount,
             transaction_date,
             invoice_month,
             id,
             status,
-            payments (
+            lb_payments (
               amount,
               invoice_month
             )
@@ -47,7 +46,7 @@ export function ClientList() {
       const currentMonth = startOfMonth(currentDate);
 
       const clientsWithStatus = clientsData.map((client: any) => {
-        const debts = client.debts || [];
+        const debts = client.lb_debts || [];
         let totalDebt = 0;
         let hasOverdueDebts = false;
         let hasPartialOverdueDebts = false;
@@ -58,7 +57,7 @@ export function ClientList() {
           const debtAmount = Number(debt.amount);
           totalDebt += debtAmount;
 
-          const totalPayments = (debt.payments || []).reduce((sum: number, payment: any) => 
+          const totalPayments = (debt.lb_payments || []).reduce((sum: number, payment: any) => 
             sum + Number(payment.amount), 0);
 
           const debtMonth = startOfMonth(parseISO(debt.invoice_month));
@@ -131,7 +130,7 @@ export function ClientList() {
     enabled: !!selectedClient && isHistoryOpen,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('debts')
+        .from('lb_debts')
         .select('*')
         .eq('client_id', selectedClient)
         .order('transaction_date', { ascending: false });
@@ -145,7 +144,7 @@ export function ClientList() {
     mutationFn: async (transactionId: string) => {
       // Primeiro, excluir todos os pagamentos associados à dívida
       const { error: paymentsError } = await supabase
-        .from('payments')
+        .from('lb_payments')
         .delete()
         .eq('debt_id', transactionId);
       
@@ -153,7 +152,7 @@ export function ClientList() {
 
       // Depois, excluir a dívida
       const { error: debtError } = await supabase
-        .from('debts')
+        .from('lb_debts')
         .delete()
         .eq('id', transactionId);
       
@@ -192,7 +191,7 @@ export function ClientList() {
   const handleDeleteTransaction = async (transactionId: string) => {
     // Primeiro, buscar o status da dívida
     const { data: debtData, error: debtError } = await supabase
-      .from('debts')
+      .from('lb_debts')
       .select('status')
       .eq('id', transactionId)
       .single();
