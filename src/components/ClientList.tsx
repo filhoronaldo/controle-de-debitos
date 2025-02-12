@@ -10,6 +10,7 @@ import { TransactionHistory } from "./TransactionHistory";
 import { ClientRow } from "./ClientRow";
 import { Client } from "@/types/client";
 import { Transaction } from "@/types/transaction";
+import { ClientFilters } from "./ClientFilters";
 
 export function ClientList() {
   const [selectedClient, setSelectedClient] = useState<string | null>(null);
@@ -17,6 +18,8 @@ export function ClientList() {
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [nameFilter, setNameFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
   const queryClient = useQueryClient();
   
   const { data: clients, isLoading } = useQuery({
@@ -213,14 +216,27 @@ export function ClientList() {
     }
   };
 
+  const filteredClients = clients?.filter((client) => {
+    const nameMatch = client.name.toLowerCase().includes(nameFilter.toLowerCase());
+    const statusMatch = !statusFilter || client.status === statusFilter;
+    return nameMatch && statusMatch;
+  });
+
   if (isLoading) {
     return <div className="text-center p-4">Carregando...</div>;
   }
 
   return (
     <>
+      <ClientFilters
+        nameFilter={nameFilter}
+        statusFilter={statusFilter}
+        onNameFilterChange={setNameFilter}
+        onStatusFilterChange={setStatusFilter}
+      />
+
       <div className="space-y-2">
-        {clients?.map((client) => (
+        {filteredClients?.map((client) => (
           <ClientRow
             key={client.id}
             client={client}
@@ -263,3 +279,4 @@ export function ClientList() {
     </>
   );
 }
+
