@@ -1,49 +1,53 @@
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Button } from "@/components/ui/button"
-import { ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react"
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
-import { supabase } from "@/integrations/supabase/client"
-import { format, parseISO, startOfMonth, endOfMonth, addMonths, subMonths, setDate, isBefore } from "date-fns"
-import { ptBR } from "date-fns/locale"
-import { useState, useEffect } from "react"
-import { CreatePaymentDialog } from "./CreatePaymentDialog"
-import { toast } from "sonner"
-import { Badge } from "@/components/ui/badge"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { format, parseISO, startOfMonth, endOfMonth, addMonths, subMonths, setDate, isBefore } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { useState, useEffect } from "react";
+import { CreatePaymentDialog } from "./CreatePaymentDialog";
+import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 
 interface InvoiceDialogProps {
-  clientId: string
-  clientName: string
-  open: boolean
-  onOpenChange: (open: boolean) => void
+  clientId: string;
+  clientName: string;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
 export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: InvoiceDialogProps) {
-  const [currentMonth, setCurrentMonth] = useState(new Date())
-  const queryClient = useQueryClient()
+  const [currentMonth, setCurrentMonth] = useState(new Date());
+  const queryClient = useQueryClient();
 
-  const { data: invoiceData, refetch } = useQuery({
-    queryKey: ["invoice-debts", clientId, format(currentMonth, "yyyy-MM")],
+  // Fetch invoice data
+  const { data: invoiceData, isLoading, error, refetch } = useQuery({
+    queryKey: ['invoice-debts', clientId, format(currentMonth, 'yyyy-MM')],
     queryFn: async () => {
-      const startDate = format(startOfMonth(currentMonth), "yyyy-MM-dd")
-      const endDate = format(endOfMonth(currentMonth), "yyyy-MM-dd")
+      const startDate = format(startOfMonth(currentMonth), 'yyyy-MM-dd');
+      const endDate = format(endOfMonth(currentMonth), 'yyyy-MM-dd');
 
-      const { data: client } = await supabase.from("clients").select("invoice_day").eq("id", clientId).single()
+      const { data: client } = await supabase
+        .from('clients')
+        .select('invoice_day')
+        .eq('id', clientId)
+        .single();
 
       const { data: debts, error: debtsError } = await supabase
-        .from("debts")
+        .from('debts')
         .select(`
           *,
           payments (*)
         `)
-        .eq("client_id", clientId)
-        .gte("invoice_month", startDate)
-        .lte("invoice_month", endDate)
-        .order("invoice_month", { ascending: true })
+        .eq('client_id', clientId)
+        .gte('invoice_month', startDate)
+        .lte('invoice_month', endDate)
+        .order('invoice_month', { ascending: true });
 
       if (debtsError) {
-        toast.error("Erro ao carregar faturas")
-        throw debtsError
+        console.error("Erro ao carregar faturas:", debtsError);
+        throw debtsError;
       }
 
       const transactions = debts.reduce((acc: any[], debt: any) => {
@@ -52,10 +56,9 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
           date: debt.transaction_date || debt.created_at,
           description: debt.description,
           amount: debt.amount,
-          type: "debt",
+          type: 'debt',
           invoice_month: debt.invoice_month,
-        })
-
+        });
         if (debt.payments) {
           debt.payments.forEach((payment: any) => {
             acc.push({
@@ -63,239 +66,217 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
               date: payment.payment_date,
               description: "Pagamento",
               amount: -payment.amount,
-              type: "payment",
+              type: 'payment',
               payment_method: payment.payment_method,
               invoice_month: payment.invoice_month,
-            })
-          })
+            });
+          });
         }
-
-        return acc
-      }, [])
+        return acc;
+      }, []);
 
       return {
         invoiceDay: client?.invoice_day || 1,
-        transactions: transactions.sort((a: any, b: any) => new Date(a.date).getTime() - new Date(b.date).getTime()),
-      }
+        transactions: transactions.sort((a: any, b: any) =>
+          new Date(a.date).getTime() - new Date(b.date).getTime()
+        ),
+      };
     },
-  })
+    onError: (err) => {
+      console.error("Erro ao buscar dados:", err);
+      toast.error("Erro ao carregar faturas");
+    },
+  });
 
+  // Mutation to delete payment
   const deletePayment = useMutation({
     mutationFn: async (paymentId: string) => {
-      const { error } = await supabase.from("payments").delete().eq("id", paymentId)
-
-      if (error) throw error
+      const { error } = await supabase
+        .from('payments')
+        .delete()
+        .eq('id', paymentId);
+      if (error) throw error;
     },
     onSuccess: () => {
-      toast.success("Pagamento excluído com sucesso")
-      queryClient.invalidateQueries({ queryKey: ["invoice-debts", clientId] })
-      queryClient.invalidateQueries({ queryKey: ["clients"] })
+      toast.success('Pagamento excluído com sucesso');
+      queryClient.invalidateQueries({ queryKey: ['invoice-debts', clientId] });
+      queryClient.invalidateQueries({ queryKey: ['clients'] });
     },
     onError: () => {
-      toast.error("Erro ao excluir pagamento")
+      toast.error('Erro ao excluir pagamento');
     },
-  })
+  });
 
+  // Refetch data when dialog opens
   useEffect(() => {
-    if (open) {
-      refetch()
+    if (open && !isLoading) {
+      refetch();
     }
-  }, [open, refetch])
+  }, [open, refetch, isLoading]);
 
+  // Calculate totals
   const calculateTotals = () => {
-    if (!invoiceData?.transactions) return { totalAmount: 0, totalPaid: 0, pendingAmount: 0 }
-
-    const totals = invoiceData.transactions.reduce(
-      (acc, transaction) => {
-        if (transaction.type === "debt") {
-          acc.totalAmount += Number(transaction.amount)
-        } else if (transaction.type === "payment") {
-          acc.totalPaid += Math.abs(Number(transaction.amount))
-        }
-        return acc
-      },
-      { totalAmount: 0, totalPaid: 0 },
-    )
-
+    if (!invoiceData?.transactions) return { totalAmount: 0, totalPaid: 0, pendingAmount: 0 };
+    const totals = invoiceData.transactions.reduce((acc, transaction) => {
+      if (transaction.type === 'debt') {
+        acc.totalAmount += Number(transaction.amount);
+      } else if (transaction.type === 'payment') {
+        acc.totalPaid += Math.abs(Number(transaction.amount));
+      }
+      return acc;
+    }, { totalAmount: 0, totalPaid: 0 });
     return {
       ...totals,
       pendingAmount: totals.totalAmount - totals.totalPaid,
-    }
-  }
+    };
+  };
 
+  // Get due date
   const getDueDate = () => {
-    if (!invoiceData?.invoiceDay) return null
-    const dueDate = setDate(currentMonth, invoiceData.invoiceDay)
-    return format(dueDate, "dd/MM/yyyy", { locale: ptBR })
-  }
+    if (!invoiceData?.invoiceDay) return null;
+    const dueDate = setDate(currentMonth, invoiceData.invoiceDay);
+    return format(dueDate, "dd/MM/yyyy", { locale: ptBR });
+  };
 
+  // Get invoice status
   const getInvoiceStatus = () => {
-    const { totalAmount, totalPaid } = calculateTotals()
-    const dueDate = getDueDate()
-    const isPastDue = dueDate
-      ? isBefore(
-          new Date(parseISO(format(setDate(currentMonth, invoiceData?.invoiceDay || 1), "yyyy-MM-dd"))),
-          new Date(),
-        )
-      : false
+    const { totalAmount, totalPaid } = calculateTotals();
+    const dueDate = getDueDate();
+    const isPastDue = dueDate ? isBefore(new Date(parseISO(format(setDate(currentMonth, invoiceData?.invoiceDay || 1), 'yyyy-MM-dd'))), new Date()) : false;
 
     if (totalPaid >= totalAmount) {
-      return { label: "Paga", variant: "outline" as const }
+      return { label: "Paga", variant: "outline" as const };
     }
     if (isPastDue) {
       if (totalPaid > 0) {
-        return { label: "Vencida - Parcial", variant: "destructive" as const }
+        return { label: "Vencida - Parcial", variant: "destructive" as const };
       }
-      return { label: "Vencida", variant: "destructive" as const }
+      return { label: "Vencida", variant: "destructive" as const };
     }
-    return { label: "Aberta", variant: "default" as const }
-  }
+    return { label: "Aberta", variant: "default" as const };
+  };
 
+  // Handle month navigation
   const handlePreviousMonth = () => {
-    setCurrentMonth((prev) => subMonths(prev, 1))
-  }
+    setCurrentMonth(prev => subMonths(prev, 1));
+  };
 
   const handleNextMonth = () => {
-    setCurrentMonth((prev) => addMonths(prev, 1))
-  }
+    setCurrentMonth(prev => addMonths(prev, 1));
+  };
 
-  const handlePaymentComplete = () => {
-    refetch()
-    toast.success("Pagamento registrado com sucesso!")
-  }
-
+  // Handle payment deletion
   const handleDeletePayment = (paymentId: string) => {
-    if (window.confirm("Tem certeza que deseja excluir este pagamento?")) {
-      deletePayment.mutate(paymentId)
+    if (window.confirm('Tem certeza que deseja excluir este pagamento?')) {
+      deletePayment.mutate(paymentId);
     }
-  }
+  };
 
-  const firstPendingDebtId = invoiceData?.transactions?.find((t) => t.type === "debt")?.id || null
-
+  // Format date helpers
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    const timezoneOffset = date.getTimezoneOffset() * 60000
-    const localDate = new Date(date.getTime() + timezoneOffset)
-    return format(localDate, "dd/MM/yyyy")
-  }
+    const date = new Date(dateString);
+    const timezoneOffset = date.getTimezoneOffset() * 60000;
+    const localDate = new Date(date.getTime() + timezoneOffset);
+    return format(localDate, 'dd/MM/yyyy');
+  };
 
   const formatMonthYear = (dateString: string | null) => {
-    if (!dateString) return "-"
-    const date = new Date(dateString)
-    const timezoneOffset = date.getTimezoneOffset() * 60000
-    const localDate = new Date(date.getTime() + timezoneOffset)
-    return format(localDate, "MMMM 'de' yyyy", { locale: ptBR })
+    if (!dateString) return '-';
+    const date = new Date(dateString);
+    const timezoneOffset = date.getTimezoneOffset() * 60000;
+    const localDate = new Date(date.getTime() + timezoneOffset);
+    return format(localDate, "MMMM 'de' yyyy", { locale: ptBR });
+  };
+
+  // Conditional rendering
+  if (isLoading) {
+    return <p>Carregando...</p>;
+  }
+
+  if (error) {
+    return <p>Ocorreu um erro ao carregar os dados.</p>;
   }
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-[95vw] max-w-3xl md:w-full p-4 md:p-6 max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-h-[80vh] overflow-y-auto w-[95vw] max-w-lg p-4 md:p-6">
         <DialogHeader>
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <DialogTitle className="text-lg md:text-xl">Fatura - {clientName}</DialogTitle>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={handlePreviousMonth}>
-                <ChevronLeft className="h-4 w-4" />
-              </Button>
-              <span className="font-medium text-sm min-w-[120px] text-center">
-                {format(currentMonth, "MMMM 'de' yyyy", { locale: ptBR })}
-              </span>
-              <Button variant="outline" size="sm" onClick={handleNextMonth}>
-                <ChevronRight className="h-4 w-4" />
-              </Button>
-            </div>
-          </div>
+          <DialogTitle>Fatura - {clientName}</DialogTitle>
         </DialogHeader>
-
-        <div className="mt-6">
-          <div className="mb-4 flex flex-col gap-4">
-            <div className="space-y-2 w-full">
-              <div className="flex flex-wrap gap-2 mb-2">
-                <Badge variant={getInvoiceStatus().variant}>{getInvoiceStatus().label}</Badge>
-              </div>
-              <div className="text-sm text-muted-foreground grid grid-cols-2 gap-2">
-                <div>
-                  Total Pendente:{" "}
-                  <span className="font-medium text-foreground">R$ {calculateTotals().pendingAmount.toFixed(2)}</span>
-                </div>
-                <div>
-                  Total do Mês:{" "}
-                  <span className="font-medium text-foreground">R$ {calculateTotals().totalAmount.toFixed(2)}</span>
-                </div>
-                <div>
-                  Total Pago:{" "}
-                  <span className="font-medium text-success">R$ {calculateTotals().totalPaid.toFixed(2)}</span>
-                </div>
-                <div>
-                  Vencimento: <span className="font-medium text-foreground">{getDueDate()}</span>
-                </div>
-              </div>
-            </div>
-            {firstPendingDebtId && (
-              <CreatePaymentDialog
-                debtId={firstPendingDebtId}
-                amount={calculateTotals().pendingAmount}
-                onPaymentComplete={handlePaymentComplete}
-                trigger={
-                  <Button className="w-full">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Registrar Pagamento
-                  </Button>
-                }
-              />
-            )}
+        <div className="space-y-4">
+          {/* Month navigation */}
+          <div className="flex justify-between items-center">
+            <Button size="sm" variant="outline" onClick={handlePreviousMonth}>
+              <ChevronLeft className="h-4 w-4" />
+            </Button>
+            <span className="text-lg font-medium">{format(currentMonth, "MMMM 'de' yyyy", { locale: ptBR })}</span>
+            <Button size="sm" variant="outline" onClick={handleNextMonth}>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
           </div>
 
-          <div className="rounded-md border overflow-x-auto max-h-[50vh] md:max-h-[40vh]">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="text-sm">Data</TableHead>
-                  <TableHead className="text-sm">Descrição</TableHead>
-                  <TableHead className="text-sm">Valor</TableHead>
-                  <TableHead className="text-sm">Mês Referência</TableHead>
-                  <TableHead className="text-sm">Ações</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {invoiceData?.transactions?.map((transaction) => (
-                  <TableRow key={transaction.id} className={transaction.type === "payment" ? "bg-muted/30" : ""}>
-                    <TableCell className="text-sm">{formatDate(transaction.date)}</TableCell>
-                    <TableCell className="text-sm whitespace-normal">{transaction.description}</TableCell>
-                    <TableCell className={`text-sm ${transaction.type === "payment" ? "text-success" : ""}`}>
-                      R$ {Math.abs(Number(transaction.amount)).toFixed(2)}
-                      {transaction.type === "payment" &&
-                        transaction.payment_method &&
-                        ` (${transaction.payment_method})`}
-                    </TableCell>
-                    <TableCell className="text-sm">{formatMonthYear(transaction.invoice_month)}</TableCell>
-                    <TableCell>
-                      {transaction.type === "payment" && (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleDeletePayment(transaction.id)}
-                          className="text-destructive hover:text-destructive/90"
-                        >
-                          <Trash2 className="h-5 w-5 md:h-4 md:w-4" />
-                        </Button>
-                      )}
-                    </TableCell>
-                  </TableRow>
-                ))}
-                {(!invoiceData?.transactions || invoiceData.transactions.length === 0) && (
-                  <TableRow>
-                    <TableCell colSpan={5} className="text-center py-4 text-sm">
-                      Nenhuma transação encontrada para este mês
-                    </TableCell>
-                  </TableRow>
-                )}
-              </TableBody>
-            </Table>
+          {/* Status and totals */}
+          <div className="space-y-2">
+            <p>
+              <strong>Status:</strong> <Badge variant={getInvoiceStatus().variant}>{getInvoiceStatus().label}</Badge>
+            </p>
+            <p><strong>Total Pendente:</strong> R$ {calculateTotals().pendingAmount.toFixed(2)}</p>
+            <p><strong>Total do Mês:</strong> R$ {calculateTotals().totalAmount.toFixed(2)}</p>
+            <p><strong>Total Pago:</strong> R$ {calculateTotals().totalPaid.toFixed(2)}</p>
+            <p><strong>Vencimento:</strong> {getDueDate()}</p>
+          </div>
+
+          {/* Register payment button */}
+          {invoiceData?.transactions?.find(t => t.type === 'debt')?.id && (
+            <CreatePaymentDialog
+              debtId={invoiceData.transactions.find(t => t.type === 'debt')?.id || ''}
+              clientId={clientId}
+              clientName={clientName}
+              onPaymentComplete={refetch}
+            />
+          )}
+
+          {/* Transactions list */}
+          <div className="space-y-4">
+            {invoiceData?.transactions?.length > 0 ? (
+              invoiceData.transactions.map((transaction) => (
+                <div key={transaction.id} className="bg-background p-4 rounded-lg shadow-sm border">
+                  <div className="flex justify-between">
+                    <span className="text-sm font-medium">Data:</span>
+                    <span className="text-sm">{formatDate(transaction.date)}</span>
+                  </div>
+                  <div className="flex justify-between mt-2">
+                    <span className="text-sm font-medium">Descrição:</span>
+                    <span className="text-sm">{transaction.description}</span>
+                  </div>
+                  <div className="flex justify-between mt-2">
+                    <span className="text-sm font-medium">Valor:</span>
+                    <span className="text-sm">R$ {Math.abs(Number(transaction.amount)).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between mt-2">
+                    <span className="text-sm font-medium">Mês Referência:</span>
+                    <span className="text-sm">{formatMonthYear(transaction.invoice_month)}</span>
+                  </div>
+                  {transaction.type === 'payment' && (
+                    <div className="flex justify-end mt-4">
+                      <Button
+                        size="sm"
+                        variant="destructive"
+                        onClick={() => handleDeletePayment(transaction.id)}
+                        className="ml-2"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
+                </div>
+              ))
+            ) : (
+              <p>Nenhuma transação encontrada para este mês</p>
+            )}
           </div>
         </div>
       </DialogContent>
     </Dialog>
-  )
+  );
 }
-
