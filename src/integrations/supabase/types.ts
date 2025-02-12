@@ -9,6 +9,92 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      clients: {
+        Row: {
+          address: string | null
+          city: string | null
+          created_at: string
+          document: string | null
+          id: string
+          invoice_day: number | null
+          is_whatsapp: boolean | null
+          name: string
+          phone: string | null
+          state: string | null
+          updated_at: string
+        }
+        Insert: {
+          address?: string | null
+          city?: string | null
+          created_at?: string
+          document?: string | null
+          id?: string
+          invoice_day?: number | null
+          is_whatsapp?: boolean | null
+          name: string
+          phone?: string | null
+          state?: string | null
+          updated_at?: string
+        }
+        Update: {
+          address?: string | null
+          city?: string | null
+          created_at?: string
+          document?: string | null
+          id?: string
+          invoice_day?: number | null
+          is_whatsapp?: boolean | null
+          name?: string
+          phone?: string | null
+          state?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      debts: {
+        Row: {
+          amount: number
+          client_id: string
+          created_at: string
+          description: string | null
+          id: string
+          invoice_month: string | null
+          status: Database["public"]["Enums"]["debt_status"]
+          transaction_date: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          client_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          invoice_month?: string | null
+          status?: Database["public"]["Enums"]["debt_status"]
+          transaction_date?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          client_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          invoice_month?: string | null
+          status?: Database["public"]["Enums"]["debt_status"]
+          transaction_date?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "debts_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "clients"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       lb_clients: {
         Row: {
           address: string | null
@@ -92,7 +178,7 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "lb_clients"
             referencedColumns: ["id"]
-          }
+          },
         ]
       }
       lb_payments: {
@@ -130,7 +216,45 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "lb_debts"
             referencedColumns: ["id"]
-          }
+          },
+        ]
+      }
+      payments: {
+        Row: {
+          amount: number
+          created_at: string
+          debt_id: string | null
+          id: string
+          invoice_month: string
+          payment_date: string
+          payment_method: string | null
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          debt_id?: string | null
+          id?: string
+          invoice_month: string
+          payment_date?: string
+          payment_method?: string | null
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          debt_id?: string | null
+          id?: string
+          invoice_month?: string
+          payment_date?: string
+          payment_method?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payments_debt_id_fkey"
+            columns: ["debt_id"]
+            isOneToOne: false
+            referencedRelation: "debts"
+            referencedColumns: ["id"]
+          },
         ]
       }
     }
@@ -148,6 +272,8 @@ export type Database = {
     }
   }
 }
+
+type PublicSchema = Database[Extract<keyof Database, "public">]
 
 export type Tables<
   PublicTableNameOrOptions extends
@@ -228,8 +354,6 @@ export type Enums<
   : PublicEnumNameOrOptions extends keyof PublicSchema["Enums"]
     ? PublicSchema["Enums"][PublicEnumNameOrOptions]
     : never
-
-type PublicSchema = Database[Extract<keyof Database, "public">]
 
 export type CompositeTypes<
   PublicCompositeTypeNameOrOptions extends
