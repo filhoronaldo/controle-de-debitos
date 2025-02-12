@@ -1,3 +1,4 @@
+
 import { DashboardCard } from "@/components/DashboardCard";
 import { ClientList } from "@/components/ClientList";
 import { Button } from "@/components/ui/button";
@@ -12,17 +13,18 @@ import { useIsMobile } from "@/hooks/use-mobile";
 const Index = () => {
   const isMobile = useIsMobile();
 
+  // Query para buscar o total de débitos e pagamentos
   const { data: totalDebt } = useQuery({
     queryKey: ['total-debt'],
     queryFn: async () => {
       const { data: debts, error: debtsError } = await supabase
-        .from('lb_debts')
+        .from('debts')
         .select('amount');
       
       if (debtsError) throw debtsError;
 
       const { data: payments, error: paymentsError } = await supabase
-        .from('lb_payments')
+        .from('payments')
         .select('amount');
       
       if (paymentsError) throw paymentsError;
@@ -38,7 +40,7 @@ const Index = () => {
     queryKey: ['total-clients'],
     queryFn: async () => {
       const { count, error } = await supabase
-        .from('lb_clients')
+        .from('clients')
         .select('*', { count: 'exact', head: true });
       
       if (error) throw error;
@@ -51,7 +53,7 @@ const Index = () => {
     queryFn: async () => {
       const today = new Date();
       const { data, error } = await supabase
-        .from('lb_payments')
+        .from('payments')
         .select('amount')
         .gte('payment_date', startOfDay(today).toISOString())
         .lte('payment_date', endOfDay(today).toISOString());
