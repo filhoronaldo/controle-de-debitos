@@ -35,7 +35,7 @@ export function ClientFilters({
             <SelectValue placeholder="Todos" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">Todos</SelectItem>
+            <SelectItem value="todos">Todos</SelectItem>
             <SelectItem value="em_dia">Em dia</SelectItem>
             <SelectItem value="atrasado">Atrasado</SelectItem>
             <SelectItem value="atrasado_parcial">Atrasado - Parcial</SelectItem>
@@ -46,4 +46,3 @@ export function ClientFilters({
     </div>
   );
 }
-

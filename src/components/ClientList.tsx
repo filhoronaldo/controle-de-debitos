@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
@@ -19,7 +18,7 @@ export function ClientList() {
   const [isInvoiceOpen, setIsInvoiceOpen] = useState(false);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [nameFilter, setNameFilter] = useState("");
-  const [statusFilter, setStatusFilter] = useState("");
+  const [statusFilter, setStatusFilter] = useState("todos");
   const queryClient = useQueryClient();
   
   const { data: clients, isLoading } = useQuery({
@@ -218,7 +217,7 @@ export function ClientList() {
 
   const filteredClients = clients?.filter((client) => {
     const nameMatch = client.name.toLowerCase().includes(nameFilter.toLowerCase());
-    const statusMatch = !statusFilter || client.status === statusFilter;
+    const statusMatch = statusFilter === "todos" || client.status === statusFilter;
     return nameMatch && statusMatch;
   });
 
@@ -279,4 +278,3 @@ export function ClientList() {
     </>
   );
 }
-
