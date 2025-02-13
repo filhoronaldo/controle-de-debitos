@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { FileText, Trash2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
@@ -36,12 +37,13 @@ export function TransactionHistory({
     const fetchClientDetails = async () => {
       if (transactions && transactions.length > 0) {
         const { data } = await supabase
-          .from("clients")
+          .from("lblz_clients")
           .select("name, document, address, invoice_day")
           .eq("name", clientName)
           .single();
+
         if (data) {
-          setClientDetails(data);
+          setClientDetails(data as ClientDetails);
         }
       }
     };
