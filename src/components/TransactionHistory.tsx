@@ -13,7 +13,7 @@ interface TransactionHistoryProps {
   onOpenChange: (open: boolean) => void;
   transactions: Transaction[] | undefined;
   clientName: string;
-  onDeleteTransaction: (transactionId: string) => void;
+  onDeleteTransaction: (transactionId: string) => void; // Função para excluir uma transação
 }
 
 interface ClientDetails {
@@ -63,7 +63,7 @@ export function TransactionHistory({
 
   const handleDeleteSelectedTransactions = () => {
     selectedTransactions.forEach((id) => onDeleteTransaction(id));
-    setSelectedTransactions([]);
+    setSelectedTransactions([]); // Limpa a seleção após a exclusão
   };
 
   return (
@@ -149,7 +149,7 @@ export function TransactionHistory({
                     <Button
                       size="sm"
                       variant="destructive"
-                      onClick={() => onDeleteTransaction(transaction.id)}
+                      onClick={() => onDeleteTransaction(transaction.id)} // Chama a função de exclusão individual
                       className="ml-2"
                     >
                       <Trash2 className="h-4 w-4" />
