@@ -28,17 +28,13 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
       const startDate = format(startOfMonth(currentMonth), "yyyy-MM-dd")
       const endDate = format(endOfMonth(currentMonth), "yyyy-MM-dd")
 
-      const { data: client } = await supabase
-        .from("lblz_clients")
-        .select("invoice_day")
-        .eq("id", clientId)
-        .single()
+      const { data: client } = await supabase.from("clients").select("invoice_day").eq("id", clientId).single()
 
       const { data: debts, error: debtsError } = await supabase
-        .from("lblz_debts")
+        .from("debts")
         .select(`
           *,
-          lblz_payments (*)
+          payments (*)
         `)
         .eq("client_id", clientId)
         .gte("invoice_month", startDate)
@@ -60,8 +56,8 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
           invoice_month: debt.invoice_month,
         })
 
-        if (debt.lblz_payments) {
-          debt.lblz_payments.forEach((payment: any) => {
+        if (debt.payments) {
+          debt.payments.forEach((payment: any) => {
             acc.push({
               id: payment.id,
               date: payment.payment_date,
@@ -86,7 +82,7 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
 
   const deletePayment = useMutation({
     mutationFn: async (paymentId: string) => {
-      const { error } = await supabase.from("lblz_payments").delete().eq("id", paymentId)
+      const { error } = await supabase.from("payments").delete().eq("id", paymentId)
 
       if (error) throw error
     },
@@ -211,7 +207,7 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
           </div>
         </DialogHeader>
 
-        <div className="mt-4 flex-grow flex-col overflow-hidden">
+        <div className="mt-4 flex-grow flex flex-col overflow-hidden">
           <div className="mb-4 flex flex-col gap-4">
             <div className="space-y-2 w-full">
               <div className="flex justify-center mb-2">
@@ -305,3 +301,4 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
     </Dialog>
   )
 }
+

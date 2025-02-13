@@ -25,7 +25,7 @@ export function CreatePaymentDialog({ debtId, amount, onPaymentComplete, trigger
     queryKey: ['debt-details', debtId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('lblz_debts')
+        .from('debts')
         .select('invoice_month')
         .eq('id', debtId)
         .maybeSingle();
@@ -50,7 +50,7 @@ export function CreatePaymentDialog({ debtId, amount, onPaymentComplete, trigger
       }
 
       const { error } = await supabase
-        .from('lblz_payments')
+        .from('payments')
         .insert({
           debt_id: debtId,
           amount: Number(paymentAmount),

@@ -51,7 +51,7 @@ export function CreateClientDialog() {
       // Remove all non-numeric characters from phone before saving
       const phoneNumbers = data.phone.replace(/\D/g, "");
 
-      const { error } = await supabase.from("lblz_clients").insert({
+      const { error } = await supabase.from("clients").insert({
         name: data.name,
         phone: phoneNumbers,
         is_whatsapp: data.is_whatsapp,

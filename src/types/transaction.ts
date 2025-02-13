@@ -1,4 +1,3 @@
-
 export interface Transaction {
   id: string;
   amount: number;
@@ -6,6 +5,4 @@ export interface Transaction {
   transaction_date: string;
   invoice_month: string;
   status: 'aberta' | 'paga' | 'parcial';
-  client_id?: string;
-  created_at?: string;
 }

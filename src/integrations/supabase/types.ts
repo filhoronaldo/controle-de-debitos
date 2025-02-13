@@ -9,7 +9,7 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
-      lblz_clients: {
+      clients: {
         Row: {
           address: string | null
           city: string | null
@@ -51,7 +51,7 @@ export type Database = {
         }
         Relationships: []
       }
-      lblz_debts: {
+      debts: {
         Row: {
           amount: number
           client_id: string
@@ -90,12 +90,12 @@ export type Database = {
             foreignKeyName: "debts_client_id_fkey"
             columns: ["client_id"]
             isOneToOne: false
-            referencedRelation: "lblz_clients"
+            referencedRelation: "clients"
             referencedColumns: ["id"]
           },
         ]
       }
-      lblz_payments: {
+      payments: {
         Row: {
           amount: number
           created_at: string
@@ -128,25 +128,10 @@ export type Database = {
             foreignKeyName: "payments_debt_id_fkey"
             columns: ["debt_id"]
             isOneToOne: false
-            referencedRelation: "lblz_debts"
+            referencedRelation: "debts"
             referencedColumns: ["id"]
           },
         ]
-      }
-      rrrr: {
-        Row: {
-          created_at: string
-          id: number
-        }
-        Insert: {
-          created_at?: string
-          id?: number
-        }
-        Update: {
-          created_at?: string
-          id?: number
-        }
-        Relationships: []
       }
     }
     Views: {
