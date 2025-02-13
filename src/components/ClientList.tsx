@@ -105,7 +105,7 @@ export function ClientList() {
             hasPendingDebts = true;
           }
 
-          totalDebt += debtAmount - totalPayments;
+          totalDebt -= totalPayments;
           console.log(`Dívida: ${debtAmount}, Pagamentos: ${totalPayments}, Total acumulado: ${totalDebt}`);
         });
 
