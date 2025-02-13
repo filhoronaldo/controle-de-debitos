@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
@@ -120,7 +119,7 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
 
         // Insert all installments
         const { error } = await supabase
-          .from('debts')
+          .from('lblz_debts')
           .insert(installmentDebts);
 
         if (error) throw error;
@@ -132,7 +131,7 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
       } else {
         // Insert single debt
         const { error } = await supabase
-          .from('debts')
+          .from('lblz_debts')
           .insert({
             client_id: clientId,
             amount: data.amount,
