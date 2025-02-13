@@ -57,55 +57,69 @@ export function ClientList() {
         const invoiceDay = client.invoice_day || 1;
 
         debts.forEach((debt: any) => {
-          const debtAmount = Number(debt.amount);
-          totalDebt += debtAmount;
+  // Garante que o valor da dívida seja um número válido
+  const debtAmount = isNaN(Number(debt.amount)) ? 0 : Number(debt.amount);
 
-          const totalPayments = (debt.payments || []).reduce((sum: number, payment: any) => 
-            sum + Number(payment.amount), 0);
+  // Calcula o total de pagamentos para esta dívida
+  const totalPayments = (debt.payments || []).reduce(
+    (sum: number, payment: any) => {
+      // Garante que o valor do pagamento seja um número válido
+      const paymentAmount = isNaN(Number(payment.amount)) ? 0 : Number(payment.amount);
+      return sum + paymentAmount;
+    },
+    0
+  );
 
-          const debtMonth = startOfMonth(parseISO(debt.invoice_month));
-          const isPastMonth = isBefore(debtMonth, currentMonth);
-          const isCurrentMonth = debtMonth.getTime() === currentMonth.getTime();
-          const hasPartialPayment = totalPayments > 0 && totalPayments < debtAmount;
-          
-          if (isPastMonth) {
-            if (hasPartialPayment) {
-              hasPartialOverdueDebts = true;
-            } else if (debt.status === 'parcial' || debt.status === 'aberta') {
-              hasOverdueDebts = true;
-            }
-          }
-          
-          if (isCurrentMonth && debt.status !== 'paga') {
-            const dueDate = setMilliseconds(
-              setSeconds(
-                setMinutes(
-                  setHours(
-                    new Date(currentDate.getFullYear(), currentDate.getMonth(), invoiceDay),
-                    23
-                  ),
-                  59
-                ),
-                59
-              ),
-              999
-            );
-            
-            if (isAfter(currentDate, dueDate)) {
-              if (hasPartialPayment) {
-                hasPartialOverdueDebts = true;
-              } else {
-                hasOverdueDebts = true;
-              }
-            }
-          }
+  // Atualiza o total de dívida subtraindo os pagamentos
+  totalDebt += debtAmount - totalPayments;
 
-          if (debt.status === 'parcial' || debt.status === 'aberta') {
-            hasPendingDebts = true;
-          }
+  // Determina o mês da dívida e verifica se é passado ou atual
+  const debtMonth = startOfMonth(parseISO(debt.invoice_month));
+  const isPastMonth = isBefore(debtMonth, currentMonth);
+  const isCurrentMonth = debtMonth.getTime() === currentMonth.getTime();
 
-          totalDebt -= totalPayments;
-        });
+  // Verifica se há pagamento parcial
+  const hasPartialPayment = totalPayments > 0 && totalPayments < debtAmount;
+
+  // Lógica para identificar dívidas atrasadas ou parcialmente atrasadas
+  if (isPastMonth) {
+    if (hasPartialPayment) {
+      hasPartialOverdueDebts = true;
+    } else if (debt.status === 'parcial' || debt.status === 'aberta') {
+      hasOverdueDebts = true;
+    }
+  }
+
+  // Lógica para identificar dívidas vencidas no mês atual
+  if (isCurrentMonth && debt.status !== 'paga') {
+    const dueDate = setMilliseconds(
+      setSeconds(
+        setMinutes(
+          setHours(
+            new Date(currentDate.getFullYear(), currentDate.getMonth(), invoiceDay),
+            23
+          ),
+          59
+        ),
+        59
+      ),
+      999
+    );
+
+    if (isAfter(currentDate, dueDate)) {
+      if (hasPartialPayment) {
+        hasPartialOverdueDebts = true;
+      } else {
+        hasOverdueDebts = true;
+      }
+    }
+  }
+
+  // Identifica dívidas pendentes
+  if (debt.status === 'parcial' || debt.status === 'aberta') {
+    hasPendingDebts = true;
+  }
+});
 
         let status: Client['status'] = 'em_dia';
         if (hasOverdueDebts) {
