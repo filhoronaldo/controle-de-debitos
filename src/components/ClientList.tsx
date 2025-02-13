@@ -50,7 +50,6 @@ export function ClientList() {
 
       const clientsWithStatus = clientsData.map((client: any) => {
         const debts = client.lblz_debts || [];
-        console.log('Dados brutos do cliente:', client);
         let totalDebt = 0;
         let hasOverdueDebts = false;
         let hasPartialOverdueDebts = false;
@@ -105,8 +104,7 @@ export function ClientList() {
             hasPendingDebts = true;
           }
 
-          totalDebt += debtAmount - totalPayments;
-          console.log(`Dívida: ${debtAmount}, Pagamentos: ${totalPayments}, Total acumulado: ${totalDebt}`);
+          totalDebt -= totalPayments;
         });
 
         let status: Client['status'] = 'em_dia';
