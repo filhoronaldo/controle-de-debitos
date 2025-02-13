@@ -27,7 +27,7 @@ export function ClientDetailsDialog({ clientId, clientName, open, onOpenChange }
     queryKey: ['client-details', clientId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('clients')
+        .from('lblz_clients')
         .select('*')
         .eq('id', clientId)
         .single();
@@ -41,7 +41,7 @@ export function ClientDetailsDialog({ clientId, clientName, open, onOpenChange }
   const handleNameEdit = async () => {
     try {
       const { error } = await supabase
-        .from('clients')
+        .from('lblz_clients')
         .update({ name: newName })
         .eq('id', clientId);
 
@@ -81,7 +81,7 @@ export function ClientDetailsDialog({ clientId, clientName, open, onOpenChange }
   const handlePhoneEdit = async () => {
     try {
       const { error } = await supabase
-        .from('clients')
+        .from('lblz_clients')
         .update({ phone: newPhone })
         .eq('id', clientId);
 
@@ -110,7 +110,7 @@ export function ClientDetailsDialog({ clientId, clientName, open, onOpenChange }
 
     try {
       const { error } = await supabase
-        .from('clients')
+        .from('lblz_clients')
         .update({ invoice_day: newInvoiceDay })
         .eq('id', clientId);
 
@@ -136,7 +136,7 @@ export function ClientDetailsDialog({ clientId, clientName, open, onOpenChange }
     
     try {
       const { error } = await supabase
-        .from('clients')
+        .from('lblz_clients')
         .update({ is_whatsapp: !client.is_whatsapp })
         .eq('id', clientId);
 

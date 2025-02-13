@@ -25,18 +25,18 @@ export function ClientList() {
     queryKey: ['clients'],
     queryFn: async () => {
       const { data: clientsData, error: clientsError } = await supabase
-        .from('clients')
+        .from('lblz_clients')
         .select(`
           id,
           name,
           invoice_day,
-          debts (
+          lblz_debts (
             amount,
             transaction_date,
             invoice_month,
             id,
             status,
-            payments (
+            lblz_payments (
               amount,
               invoice_month
             )
@@ -49,7 +49,8 @@ export function ClientList() {
       const currentMonth = startOfMonth(currentDate);
 
       const clientsWithStatus = clientsData.map((client: any) => {
-        const debts = client.debts || [];
+        const debts = client.lblz_debts || [];
+        console.log('Dados brutos do cliente:', client);
         let totalDebt = 0;
         let hasOverdueDebts = false;
         let hasPartialOverdueDebts = false;
@@ -104,7 +105,8 @@ export function ClientList() {
             hasPendingDebts = true;
           }
 
-          totalDebt -= totalPayments;
+          totalDebt += debtAmount - totalPayments;
+          console.log(`Dívida: ${debtAmount}, Pagamentos: ${totalPayments}, Total acumulado: ${totalDebt}`);
         });
 
         let status: Client['status'] = 'em_dia';
@@ -133,7 +135,7 @@ export function ClientList() {
     enabled: !!selectedClient && isHistoryOpen,
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('debts')
+        .from('lblz_debts')
         .select('*')
         .eq('client_id', selectedClient)
         .order('transaction_date', { ascending: false });
@@ -147,7 +149,7 @@ export function ClientList() {
     mutationFn: async (transactionId: string) => {
       // Primeiro, excluir todos os pagamentos associados à dívida
       const { error: paymentsError } = await supabase
-        .from('payments')
+        .from('lblz_payments')
         .delete()
         .eq('debt_id', transactionId);
       
@@ -155,7 +157,7 @@ export function ClientList() {
 
       // Depois, excluir a dívida
       const { error: debtError } = await supabase
-        .from('debts')
+        .from('lblz_debts')
         .delete()
         .eq('id', transactionId);
       
@@ -194,7 +196,7 @@ export function ClientList() {
   const handleDeleteTransaction = async (transactionId: string) => {
     // Primeiro, buscar o status da dívida
     const { data: debtData, error: debtError } = await supabase
-      .from('debts')
+      .from('lblz_debts')
       .select('status')
       .eq('id', transactionId)
       .single();

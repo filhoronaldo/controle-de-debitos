@@ -1,4 +1,3 @@
-
 import { useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -15,13 +14,13 @@ export default function ClientHistory() {
     queryKey: ['client-history', clientId],
     queryFn: async () => {
       const { data: client } = await supabase
-        .from('clients')
+        .from('lblz_clients')
         .select('name')
         .eq('id', clientId)
         .single();
 
       const { data: debts } = await supabase
-        .from('debts')
+        .from('lblz_debts')
         .select(`
           *,
           payments (*)
