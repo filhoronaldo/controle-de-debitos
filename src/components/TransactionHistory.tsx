@@ -91,7 +91,10 @@ export function TransactionHistory({
         .delete()
         .in("debt_id", selectedDebts);
 
-      if (paymentsError) throw paymentsError;
+      if (paymentsError) {
+        console.error('Error deleting payments:', paymentsError);
+        throw paymentsError;
+      }
 
       // Depois exclui os débitos
       const { error: debtsError } = await supabase
@@ -99,14 +102,18 @@ export function TransactionHistory({
         .delete()
         .in("id", selectedDebts);
 
-      if (debtsError) throw debtsError;
+      if (debtsError) {
+        console.error('Error deleting debts:', debtsError);
+        throw debtsError;
+      }
 
       toast.success(`${selectedDebts.length} débito(s) excluído(s) com sucesso`);
       
       // Limpa a seleção
       setSelectedDebts([]);
       
-      // Atualiza os dados
+      // Força a atualização dos dados
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
       queryClient.invalidateQueries({ queryKey: ["clients"] });
       queryClient.invalidateQueries({ queryKey: ["total-debt"] });
       queryClient.invalidateQueries({ queryKey: ["today-payments"] });
@@ -116,8 +123,8 @@ export function TransactionHistory({
         onOpenChange(false);
       }
     } catch (error) {
-      console.error('Error deleting debts:', error);
-      toast.error("Erro ao excluir débitos");
+      console.error('Error in deletion process:', error);
+      toast.error("Erro ao excluir débitos. Por favor, tente novamente.");
     }
   };
 
