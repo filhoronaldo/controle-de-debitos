@@ -36,7 +36,7 @@ export function ClientList() {
             invoice_month,
             id,
             status,
-            payments (
+            lblz_payments (
               amount,
               invoice_month
             )
