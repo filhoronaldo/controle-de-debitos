@@ -8,6 +8,9 @@ import { Transaction } from "@/types/transaction";
 import { ptBR } from "date-fns/locale";
 import { supabase } from "@/integrations/supabase/client";
 import { useEffect, useState } from "react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface TransactionHistoryProps {
   isOpen: boolean;
@@ -32,6 +35,8 @@ export function TransactionHistory({
   onDeleteTransaction,
 }: TransactionHistoryProps) {
   const [clientDetails, setClientDetails] = useState<ClientDetails | null>(null);
+  const [selectedDebts, setSelectedDebts] = useState<string[]>([]);
+  const queryClient = useQueryClient();
 
   useEffect(() => {
     const fetchClientDetails = async () => {
@@ -49,6 +54,72 @@ export function TransactionHistory({
     };
     fetchClientDetails();
   }, [clientName, transactions]);
+
+  const handleToggleDebt = (debtId: string) => {
+    setSelectedDebts(prev => 
+      prev.includes(debtId) 
+        ? prev.filter(id => id !== debtId)
+        : [...prev, debtId]
+    );
+  };
+
+  const handleSelectAllDebts = () => {
+    if (!transactions) return;
+    
+    if (selectedDebts.length === transactions.length) {
+      setSelectedDebts([]);
+    } else {
+      const allDebtIds = transactions.map(t => t.id);
+      setSelectedDebts(allDebtIds);
+    }
+  };
+
+  const handleDeleteSelectedDebts = async () => {
+    if (selectedDebts.length === 0) {
+      toast.error("Selecione pelo menos um débito para excluir");
+      return;
+    }
+
+    if (!window.confirm(`Tem certeza que deseja excluir ${selectedDebts.length} débito(s)?`)) {
+      return;
+    }
+
+    try {
+      // Primeiro exclui os pagamentos associados
+      const { error: paymentsError } = await supabase
+        .from("lblz_payments")
+        .delete()
+        .in("debt_id", selectedDebts);
+
+      if (paymentsError) throw paymentsError;
+
+      // Depois exclui os débitos
+      const { error: debtsError } = await supabase
+        .from("lblz_debts")
+        .delete()
+        .in("id", selectedDebts);
+
+      if (debtsError) throw debtsError;
+
+      toast.success(`${selectedDebts.length} débito(s) excluído(s) com sucesso`);
+      
+      // Limpa a seleção
+      setSelectedDebts([]);
+      
+      // Atualiza os dados
+      queryClient.invalidateQueries({ queryKey: ["clients"] });
+      queryClient.invalidateQueries({ queryKey: ["total-debt"] });
+      queryClient.invalidateQueries({ queryKey: ["today-payments"] });
+      
+      // Fecha o modal se todos os débitos foram excluídos
+      if (transactions?.length === selectedDebts.length) {
+        onOpenChange(false);
+      }
+    } catch (error) {
+      console.error('Error deleting debts:', error);
+      toast.error("Erro ao excluir débitos");
+    }
+  };
 
   const handleGeneratePromissoryNote = (transaction: Transaction) => {
     const printWindow = window.open("", "_blank");
@@ -197,68 +268,94 @@ export function TransactionHistory({
         <DialogHeader>
           <DialogTitle>Histórico de Transações - {clientName}</DialogTitle>
         </DialogHeader>
+
+        <div className="flex justify-between items-center mb-4">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSelectAllDebts}
+          >
+            {selectedDebts.length === (transactions?.length || 0) ? "Desmarcar Todos" : "Selecionar Todos"}
+          </Button>
+          
+          {selectedDebts.length > 0 && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleDeleteSelectedDebts}
+            >
+              Excluir Selecionados ({selectedDebts.length})
+            </Button>
+          )}
+        </div>
+
         <div className="space-y-4">
           {transactions?.map((transaction) => (
             <div key={transaction.id} className="bg-background p-4 rounded-lg shadow-sm border">
-              <div className="flex justify-between">
-                <span className="text-sm font-medium">Data:</span>
-                <span className="text-sm">
-                  {transaction.transaction_date
-                    ? format(parseISO(transaction.transaction_date), "dd/MM/yyyy")
-                    : "-"}
-                </span>
-              </div>
-              <div className="flex justify-between mt-2">
-                <span className="text-sm font-medium">Descrição:</span>
-                <span className="text-sm">{transaction.description || "-"}</span>
-              </div>
-              <div className="flex justify-between mt-2">
-                <span className="text-sm font-medium">Valor:</span>
-                <span className="text-sm">R$ {Number(transaction.amount).toFixed(2)}</span>
-              </div>
-              <div className="flex justify-between mt-2">
-                <span className="text-sm font-medium">Mês Referência:</span>
-                <span className="text-sm">
-                  {transaction.invoice_month
-                    ? format(parseISO(transaction.invoice_month), "MM/yyyy")
-                    : "-"}
-                </span>
-              </div>
-              <div className="flex justify-between mt-2">
-                <span className="text-sm font-medium">Status:</span>
-                <Badge
-                  variant={
-                    transaction.status === "paga"
-                      ? "success"
-                      : transaction.status === "parcial"
-                      ? "warning"
-                      : "destructive"
-                  }
-                >
-                  {transaction.status === "paga"
-                    ? "Pago"
-                    : transaction.status === "parcial"
-                    ? "Parcial"
-                    : "Em Aberto"}
-                </Badge>
-              </div>
-              <div className="flex justify-end space-x-2 mt-4">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleGeneratePromissoryNote(transaction)}
-                  title="Gerar Promissória"
-                >
-                  <FileText className="h-4 w-4" />
-                </Button>
-                <Button
-                  size="sm"
-                  variant="destructive"
-                  onClick={() => onDeleteTransaction(transaction.id)}
-                  className="ml-2"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
+              <div className="flex items-start justify-between">
+                <div className="flex items-start gap-3">
+                  <Checkbox
+                    checked={selectedDebts.includes(transaction.id)}
+                    onCheckedChange={() => handleToggleDebt(transaction.id)}
+                  />
+                  <div>
+                    <div className="flex justify-between">
+                      <span className="text-sm font-medium">Data:</span>
+                      <span className="text-sm">
+                        {transaction.transaction_date ? format(parseISO(transaction.transaction_date), "dd/MM/yyyy") : "-"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between mt-2">
+                      <span className="text-sm font-medium">Descrição:</span>
+                      <span className="text-sm">{transaction.description || "-"}</span>
+                    </div>
+                    <div className="flex justify-between mt-2">
+                      <span className="text-sm font-medium">Valor:</span>
+                      <span className="text-sm">R$ {Number(transaction.amount).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between mt-2">
+                      <span className="text-sm font-medium">Mês Referência:</span>
+                      <span className="text-sm">
+                        {transaction.invoice_month ? format(parseISO(transaction.invoice_month), "MM/yyyy") : "-"}
+                      </span>
+                    </div>
+                    <div className="flex justify-between mt-2">
+                      <span className="text-sm font-medium">Status:</span>
+                      <Badge
+                        variant={
+                          transaction.status === "paga"
+                            ? "success"
+                            : transaction.status === "parcial"
+                            ? "warning"
+                            : "destructive"
+                        }
+                      >
+                        {transaction.status === "paga"
+                          ? "Pago"
+                          : transaction.status === "parcial"
+                          ? "Parcial"
+                          : "Em Aberto"}
+                      </Badge>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2">
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => handleGeneratePromissoryNote(transaction)}
+                    title="Gerar Promissória"
+                  >
+                    <FileText className="h-4 w-4" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    onClick={() => onDeleteTransaction(transaction.id)}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </div>
           ))}
