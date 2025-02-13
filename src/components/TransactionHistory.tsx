@@ -13,7 +13,7 @@ interface TransactionHistoryProps {
   onOpenChange: (open: boolean) => void;
   transactions: Transaction[] | undefined;
   clientName: string;
-  onDeleteTransaction: (transactionId: string) => void; // Função para excluir uma transação
+  onDeleteTransaction: (transactionId: string) => void;
 }
 
 interface ClientDetails {
