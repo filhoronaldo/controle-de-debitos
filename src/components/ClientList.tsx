@@ -278,3 +278,5 @@ export function ClientList() {
     </>
   );
 }
+console.log('Dados brutos do cliente:', client);
+console.log(`Dívida: ${debtAmount}, Pagamentos: ${totalPayments}, Total acumulado: ${totalDebt}`);
