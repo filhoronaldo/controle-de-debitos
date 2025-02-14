@@ -50,7 +50,6 @@ export function ClientList() {
 
       const clientsWithStatus = clientsData.map((client: any) => {
         const debts = client.lblz_debts || [];
-        console.log('Dados brutos do cliente:', client);
         let totalDebt = 0;
         let hasOverdueDebts = false;
         let hasPartialOverdueDebts = false;
@@ -59,10 +58,10 @@ export function ClientList() {
 
         debts.forEach((debt: any) => {
           const debtAmount = Number(debt.amount);
-          totalDebt += debtAmount;
-
-          const totalPayments = (debt.payments || []).reduce((sum: number, payment: any) => 
+          const totalPayments = (debt.lblz_payments || []).reduce((sum: number, payment: any) => 
             sum + Number(payment.amount), 0);
+
+          totalDebt += (debtAmount - totalPayments);
 
           const debtMonth = startOfMonth(parseISO(debt.invoice_month));
           const isPastMonth = isBefore(debtMonth, currentMonth);
@@ -104,9 +103,6 @@ export function ClientList() {
           if (debt.status === 'parcial' || debt.status === 'aberta') {
             hasPendingDebts = true;
           }
-
-          totalDebt -= totalPayments;
-          console.log(`Dívida: ${debtAmount}, Pagamentos: ${totalPayments}, Total acumulado: ${totalDebt}`);
         });
 
         let status: Client['status'] = 'em_dia';
@@ -147,7 +143,6 @@ export function ClientList() {
 
   const deleteTransaction = useMutation({
     mutationFn: async (transactionId: string) => {
-      // Primeiro, excluir todos os pagamentos associados à dívida
       const { error: paymentsError } = await supabase
         .from('lblz_payments')
         .delete()
@@ -155,7 +150,6 @@ export function ClientList() {
       
       if (paymentsError) throw paymentsError;
 
-      // Depois, excluir a dívida
       const { error: debtError } = await supabase
         .from('lblz_debts')
         .delete()
@@ -194,7 +188,6 @@ export function ClientList() {
   };
 
   const handleDeleteTransaction = async (transactionId: string) => {
-    // Primeiro, buscar o status da dívida
     const { data: debtData, error: debtError } = await supabase
       .from('lblz_debts')
       .select('status')
