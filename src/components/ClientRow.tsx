@@ -1,9 +1,13 @@
 
 import { Button } from "@/components/ui/button";
-import { CreditCard, History, User } from "lucide-react";
+import { CreditCard, History, User, Send } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { CreateDebtDialog } from "./CreateDebtDialog";
 import { Client } from "@/types/client";
+import { supabase } from "@/integrations/supabase/client";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
+import { toast } from "sonner";
 
 interface ClientRowProps {
   client: Client;
@@ -18,6 +22,34 @@ export function ClientRow({
   onViewDetails,
   onViewHistory,
 }: ClientRowProps) {
+  const handleSendInvoice = async () => {
+    try {
+      if (!client.next_due_date || !client.next_invoice_amount) {
+        toast.error("Não há fatura para enviar");
+        return;
+      }
+
+      const dueDate = format(client.next_due_date, "dd/MM/yyyy");
+      const invoiceMonth = format(client.next_due_date, "yyyy-MM-dd");
+
+      const { error } = await supabase.functions.invoke('send-invoice', {
+        body: {
+          clientId: client.id,
+          dueDate,
+          invoiceAmount: client.next_invoice_amount,
+          totalDebt: client.total_debt,
+          invoiceMonth
+        }
+      });
+
+      if (error) throw error;
+      toast.success("Fatura enviada com sucesso!");
+    } catch (error) {
+      console.error('Error sending invoice:', error);
+      toast.error("Erro ao enviar fatura");
+    }
+  };
+
   const getStatusBadge = (status: Client['status']) => {
     switch (status) {
       case 'atrasado':
@@ -53,20 +85,29 @@ export function ClientRow({
       colorClass = "text-orange-500";
     }
 
+    const lastInvoiceInfo = client.last_invoice_sent_month ? (
+      <span className="text-gray-500 ml-2">
+        (Última fatura: {format(new Date(client.last_invoice_sent_month), "MMM/yy", { locale: ptBR })})
+      </span>
+    ) : null;
+
     return (
-      <div className={`text-xs ${colorClass}`}>
-        {client.days_until_due === 0 ? (
-          "Vence hoje"
-        ) : client.days_until_due === 1 ? (
-          "Vence amanhã"
-        ) : (
-          `Vence em ${client.days_until_due} dias`
-        )}
-        {client.next_invoice_amount > 0 && (
-          <span className="ml-2">
-            (R$ {client.next_invoice_amount.toFixed(2)})
-          </span>
-        )}
+      <div className="flex items-center gap-2">
+        <div className={`text-xs ${colorClass}`}>
+          {client.days_until_due === 0 ? (
+            "Vence hoje"
+          ) : client.days_until_due === 1 ? (
+            "Vence amanhã"
+          ) : (
+            `Vence em ${client.days_until_due} dias`
+          )}
+          {client.next_invoice_amount > 0 && (
+            <span className="ml-2">
+              (R$ {client.next_invoice_amount.toFixed(2)})
+            </span>
+          )}
+        </div>
+        {lastInvoiceInfo}
       </div>
     );
   };
@@ -81,7 +122,17 @@ export function ClientRow({
           </div>
           <p className="text-sm text-muted-foreground">R$ {client.total_debt.toFixed(2)}</p>
         </div>
-        <div>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleSendInvoice}
+            className="h-8"
+            disabled={!client.next_invoice_amount}
+          >
+            <Send className="h-4 w-4 mr-1" />
+            Enviar Fatura
+          </Button>
           {getStatusBadge(client.status)}
         </div>
       </div>

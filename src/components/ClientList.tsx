@@ -31,6 +31,8 @@ export function ClientList() {
           id,
           name,
           invoice_day,
+          last_invoice_sent_at,
+          last_invoice_sent_month,
           lblz_debts (
             amount,
             transaction_date,
@@ -158,7 +160,9 @@ export function ClientList() {
           status,
           next_due_date: nextDueDate,
           days_until_due: daysUntilDue,
-          next_invoice_amount: nextInvoiceAmount
+          next_invoice_amount: nextInvoiceAmount,
+          last_invoice_sent_at: client.last_invoice_sent_at,
+          last_invoice_sent_month: client.last_invoice_sent_month
         };
       });
 

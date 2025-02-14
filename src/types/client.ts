@@ -7,4 +7,6 @@ export interface Client {
   next_due_date?: Date;
   days_until_due?: number;
   next_invoice_amount?: number;
+  last_invoice_sent_at?: string;
+  last_invoice_sent_month?: string;
 }

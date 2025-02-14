@@ -18,8 +18,10 @@ export type Database = {
           id: string
           invoice_day: number | null
           is_whatsapp: boolean | null
+          last_invoice_sent_at: string | null
+          last_invoice_sent_month: string | null
           name: string
-          phone: string | null
+          phone: string
           state: string | null
           updated_at: string
         }
@@ -31,8 +33,10 @@ export type Database = {
           id?: string
           invoice_day?: number | null
           is_whatsapp?: boolean | null
+          last_invoice_sent_at?: string | null
+          last_invoice_sent_month?: string | null
           name: string
-          phone?: string | null
+          phone: string
           state?: string | null
           updated_at?: string
         }
@@ -44,8 +48,10 @@ export type Database = {
           id?: string
           invoice_day?: number | null
           is_whatsapp?: boolean | null
+          last_invoice_sent_at?: string | null
+          last_invoice_sent_month?: string | null
           name?: string
-          phone?: string | null
+          phone?: string
           state?: string | null
           updated_at?: string
         }
