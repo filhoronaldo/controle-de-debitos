@@ -43,11 +43,42 @@ export function ClientRow({
     }
   };
 
+  const getDueInfo = () => {
+    if (!client.days_until_due || !client.next_invoice_amount) return null;
+
+    let colorClass = "text-green-600";
+    if (client.days_until_due <= 3) {
+      colorClass = "text-red-600";
+    } else if (client.days_until_due <= 7) {
+      colorClass = "text-orange-500";
+    }
+
+    return (
+      <div className={`text-xs ${colorClass}`}>
+        {client.days_until_due === 0 ? (
+          "Vence hoje"
+        ) : client.days_until_due === 1 ? (
+          "Vence amanhã"
+        ) : (
+          `Vence em ${client.days_until_due} dias`
+        )}
+        {client.next_invoice_amount > 0 && (
+          <span className="ml-2">
+            (R$ {client.next_invoice_amount.toFixed(2)})
+          </span>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="p-4 border-b last:border-b-0">
       <div className="flex justify-between items-start mb-3">
         <div>
-          <p className="font-medium">{client.name}</p>
+          <div className="flex items-center gap-2">
+            <p className="font-medium">{client.name}</p>
+            {getDueInfo()}
+          </div>
           <p className="text-sm text-muted-foreground">R$ {client.total_debt.toFixed(2)}</p>
         </div>
         <div>

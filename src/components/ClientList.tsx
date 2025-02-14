@@ -1,7 +1,8 @@
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
-import { format, parseISO, isBefore, startOfMonth, endOfMonth, isAfter, setHours, setMinutes, setSeconds, setMilliseconds } from "date-fns";
+import { format, parseISO, isBefore, startOfMonth, endOfMonth, isAfter, setHours, setMinutes, setSeconds, setMilliseconds, addMonths, differenceInDays } from "date-fns";
 import { toast } from "sonner";
 import { InvoiceDialog } from "./InvoiceDialog";
 import { ClientDetailsDialog } from "./ClientDetailsDialog";
@@ -56,12 +57,48 @@ export function ClientList() {
         let hasPendingDebts = false;
         const invoiceDay = client.invoice_day || 1;
 
+        // Calculate next due date
+        const nextDueDate = setMilliseconds(
+          setSeconds(
+            setMinutes(
+              setHours(
+                new Date(
+                  currentDate.getFullYear(),
+                  currentDate.getMonth(),
+                  invoiceDay
+                ),
+                23
+              ),
+              59
+            ),
+            59
+          ),
+          999
+        );
+
+        // If current date is past this month's due date, set next due date to next month
+        if (isAfter(currentDate, nextDueDate)) {
+          nextDueDate.setMonth(nextDueDate.getMonth() + 1);
+        }
+
+        // Calculate days until due
+        const daysUntilDue = differenceInDays(nextDueDate, currentDate);
+
+        // Calculate next invoice amount (sum of all debts for the current month)
+        let nextInvoiceAmount = 0;
+        const nextInvoiceMonth = format(nextDueDate, 'yyyy-MM');
+
         debts.forEach((debt: any) => {
           const debtAmount = Number(debt.amount);
           const totalPayments = (debt.lblz_payments || []).reduce((sum: number, payment: any) => 
             sum + Number(payment.amount), 0);
 
           totalDebt += (debtAmount - totalPayments);
+
+          // Add to next invoice amount if the debt is for the next due month
+          if (debt.invoice_month?.startsWith(nextInvoiceMonth)) {
+            nextInvoiceAmount += (debtAmount - totalPayments);
+          }
 
           const debtMonth = startOfMonth(parseISO(debt.invoice_month));
           const isPastMonth = isBefore(debtMonth, currentMonth);
@@ -118,7 +155,10 @@ export function ClientList() {
           id: client.id,
           name: client.name,
           total_debt: totalDebt,
-          status
+          status,
+          next_due_date: nextDueDate,
+          days_until_due: daysUntilDue,
+          next_invoice_amount: nextInvoiceAmount
         };
       });
 
