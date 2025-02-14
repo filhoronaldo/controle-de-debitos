@@ -20,7 +20,7 @@ interface InvoiceRequest {
   invoiceMonth: string;
 }
 
-serve(async (req) => {
+async function handler(req: Request) {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders })
   }
@@ -96,4 +96,6 @@ serve(async (req) => {
       { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }
-})
+}
+
+serve(handler)
