@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { CreateDebtDialog } from "./CreateDebtDialog";
 import { Client } from "@/types/client";
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
+import { format, isAfter } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -32,8 +32,19 @@ export function ClientRow({
         return;
       }
 
-      const dueDate = format(client.next_due_date, "dd/MM/yyyy");
-      const invoiceMonth = format(client.next_due_date, "yyyy-MM-dd");
+      // Buscar faturas atrasadas do cliente
+      const { data: debts, error: debtsError } = await supabase
+        .from('lblz_debts')
+        .select('*')
+        .eq('client_id', client.id)
+        .eq('status', 'aberta')
+        .order('transaction_date', { ascending: true });
+
+      if (debtsError) {
+        console.error('Error fetching debts:', debtsError);
+        toast.error("Erro ao buscar faturas do cliente");
+        return;
+      }
 
       // Buscar o telefone do cliente
       const { data: clientData, error: clientError } = await supabase
@@ -47,21 +58,28 @@ export function ClientRow({
         return;
       }
 
-      // Decidir qual mensagem enviar baseado no status do cliente
+      // Encontrar a fatura mais antiga em aberto
+      const overdueDebt = debts?.find(debt => 
+        debt.transaction_date && isAfter(new Date(), new Date(debt.transaction_date))
+      );
+
+      // Decidir qual mensagem enviar baseado no status do cliente e faturas atrasadas
       let message = "";
       const isOverdue = client.status === 'atrasado' || client.status === 'atrasado_parcial';
-
-      if (isOverdue) {
+      
+      if (isOverdue && overdueDebt) {
+        const overdueDueDate = format(new Date(overdueDebt.transaction_date), "dd/MM/yyyy");
         message = `Oi, ${client.name}! Tudo certo?\n\n` +
-          `Só passando aqui pra te lembrar que o pagamento da sua fatura de R$ ${client.next_invoice_amount.toFixed(2)}, ` +
-          `que venceu dia *${dueDate}*, ainda não foi feito.\n\n` +
+          `Só passando aqui pra te lembrar que o pagamento da sua fatura de R$ ${overdueDebt.amount.toFixed(2)}, ` +
+          `que venceu dia *${overdueDueDate}*, ainda não foi feito.\n\n` +
           `Se já pagou, só me avisa pra darmos baixa! Se ainda não conseguiu, me chama pra combinarmos o melhor jeito de acertar.\n\n` +
           `💰 *Opções de Pagamento*:\n` +
-          `- Fatura em aberto: R$ ${client.next_invoice_amount.toFixed(2)}\n` +
+          `- Fatura em aberto: R$ ${overdueDebt.amount.toFixed(2)}\n` +
           `- Total devido: R$ ${client.total_debt.toFixed(2)}\n\n` +
           `Qualquer coisa, só mandar mensagem! Tamo junto. 😉\n\n` +
           `*Lane&Beleza*`;
       } else {
+        const dueDate = format(client.next_due_date, "dd/MM/yyyy");
         message = `Olá, ${client.name}!\n\n` +
           `Gostaria de lembrá-lo que o nosso combinado para este mês vence no dia *${dueDate}*.\n\n` +
           `Você pode efetuar o pagamento da fatura deste mês no valor de *R$ ${client.next_invoice_amount.toFixed(2)}*. ` +
@@ -74,6 +92,8 @@ export function ClientRow({
           `Caso tenha dúvidas ou precise de ajuda, é só responder essa mensagem aqui no WhatsApp que estamos à disposição!\n\n` +
           `Atenciosamente,\n*Lane&Beleza*`;
       }
+
+      const invoiceMonth = format(client.next_due_date, "yyyy-MM-dd");
 
       // Enviar mensagem via WhatsApp API
       const response = await fetch("https://evonovo.meusabia.com/message/sendText/detrancaruarushopping", {
