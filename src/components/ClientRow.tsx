@@ -8,6 +8,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface ClientRowProps {
   client: Client;
@@ -22,6 +23,8 @@ export function ClientRow({
   onViewDetails,
   onViewHistory,
 }: ClientRowProps) {
+  const queryClient = useQueryClient();
+
   const handleSendInvoice = async () => {
     try {
       if (!client.next_due_date || !client.next_invoice_amount) {
@@ -85,6 +88,8 @@ export function ClientRow({
 
       if (updateError) throw updateError;
 
+      // Recarregar os dados dos clientes
+      await queryClient.invalidateQueries({ queryKey: ['clients'] });
       toast.success("Fatura enviada com sucesso!");
     } catch (error) {
       console.error('Error sending invoice:', error);
