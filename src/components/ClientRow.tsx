@@ -47,18 +47,33 @@ export function ClientRow({
         return;
       }
 
-      // Formatar a mensagem
-      const message = `Olá, ${client.name}!\n\n` +
-        `Gostaria de lembrá-lo que o nosso combinado para este mês vence no dia *${dueDate}*.\n\n` +
-        `Você pode efetuar o pagamento da fatura deste mês no valor de *R$ ${client.next_invoice_amount.toFixed(2)}*. ` +
-        `Caso prefira, também tem a opção de quitar um valor maior, contribuindo para reduzir seu débito total, ` +
-        `que atualmente está em *R$ ${client.total_debt.toFixed(2)}*.\n\n` +
-        `👉 *Opções de Pagamento*:\n` +
-        `- Mínimo (Fatura deste mês): R$ ${client.next_invoice_amount.toFixed(2)}\n` +
-        `- Total Devido: R$ ${client.total_debt.toFixed(2)}\n\n` +
-        `Quanto maior o valor pago, mais próximo você fica de liquidar seu débito total! 😊\n\n` +
-        `Caso tenha dúvidas ou precise de ajuda, é só responder essa mensagem aqui no WhatsApp que estamos à disposição!\n\n` +
-        `Atenciosamente,\n*Lane&Beleza*`;
+      // Decidir qual mensagem enviar baseado no status do cliente
+      let message = "";
+      const isOverdue = client.status === 'atrasado' || client.status === 'atrasado_parcial';
+
+      if (isOverdue) {
+        message = `Oi, ${client.name}! Tudo certo?\n\n` +
+          `Só passando aqui pra te lembrar que o pagamento da sua fatura de R$ ${client.next_invoice_amount.toFixed(2)}, ` +
+          `que venceu dia *${dueDate}*, ainda não foi feito.\n\n` +
+          `Se já pagou, só me avisa pra darmos baixa! Se ainda não conseguiu, me chama pra combinarmos o melhor jeito de acertar.\n\n` +
+          `💰 *Opções de Pagamento*:\n` +
+          `- Fatura em aberto: R$ ${client.next_invoice_amount.toFixed(2)}\n` +
+          `- Total devido: R$ ${client.total_debt.toFixed(2)}\n\n` +
+          `Qualquer coisa, só mandar mensagem! Tamo junto. 😉\n\n` +
+          `*Lane&Beleza*`;
+      } else {
+        message = `Olá, ${client.name}!\n\n` +
+          `Gostaria de lembrá-lo que o nosso combinado para este mês vence no dia *${dueDate}*.\n\n` +
+          `Você pode efetuar o pagamento da fatura deste mês no valor de *R$ ${client.next_invoice_amount.toFixed(2)}*. ` +
+          `Caso prefira, também tem a opção de quitar um valor maior, contribuindo para reduzir seu débito total, ` +
+          `que atualmente está em *R$ ${client.total_debt.toFixed(2)}*.\n\n` +
+          `👉 *Opções de Pagamento*:\n` +
+          `- Mínimo (Fatura deste mês): R$ ${client.next_invoice_amount.toFixed(2)}\n` +
+          `- Total Devido: R$ ${client.total_debt.toFixed(2)}\n\n` +
+          `Quanto maior o valor pago, mais próximo você fica de liquidar seu débito total! 😊\n\n` +
+          `Caso tenha dúvidas ou precise de ajuda, é só responder essa mensagem aqui no WhatsApp que estamos à disposição!\n\n` +
+          `Atenciosamente,\n*Lane&Beleza*`;
+      }
 
       // Enviar mensagem via WhatsApp API
       const response = await fetch("https://evonovo.meusabia.com/message/sendText/detrancaruarushopping", {
