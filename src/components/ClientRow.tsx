@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { CreditCard, History, User, Send } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -27,12 +26,6 @@ export function ClientRow({
 
   const handleSendInvoice = async () => {
     try {
-      if (!client.next_due_date || !client.next_invoice_amount) {
-        toast.error("Não há fatura para enviar");
-        return;
-      }
-
-      // Buscar faturas atrasadas do cliente
       const { data: debts, error: debtsError } = await supabase
         .from('lblz_debts')
         .select('*')
@@ -46,7 +39,6 @@ export function ClientRow({
         return;
       }
 
-      // Buscar o telefone do cliente
       const { data: clientData, error: clientError } = await supabase
         .from('lblz_clients')
         .select('phone')
@@ -58,16 +50,13 @@ export function ClientRow({
         return;
       }
 
-      // Encontrar a fatura mais antiga em aberto
       const overdueDebt = debts?.find(debt => 
         debt.transaction_date && isAfter(new Date(), new Date(debt.transaction_date))
       );
 
-      // Decidir qual mensagem enviar baseado no status do cliente e faturas atrasadas
       let message = "";
-      const isOverdue = client.status === 'atrasado' || client.status === 'atrasado_parcial';
       
-      if (isOverdue && overdueDebt) {
+      if (overdueDebt) {
         const overdueDueDate = format(new Date(overdueDebt.transaction_date), "dd/MM/yyyy");
         message = `Oi, ${client.name}! Tudo certo?\n\n` +
           `Só passando aqui pra te lembrar que o pagamento da sua fatura de R$ ${overdueDebt.amount.toFixed(2)}, ` +
@@ -78,7 +67,7 @@ export function ClientRow({
           `- Total devido: R$ ${client.total_debt.toFixed(2)}\n\n` +
           `Qualquer coisa, só mandar mensagem! Tamo junto. 😉\n\n` +
           `*Lane&Beleza*`;
-      } else {
+      } else if (client.next_due_date && client.next_invoice_amount) {
         const dueDate = format(client.next_due_date, "dd/MM/yyyy");
         message = `Olá, ${client.name}!\n\n` +
           `Gostaria de lembrá-lo que o nosso combinado para este mês vence no dia *${dueDate}*.\n\n` +
@@ -91,11 +80,15 @@ export function ClientRow({
           `Quanto maior o valor pago, mais próximo você fica de liquidar seu débito total! 😊\n\n` +
           `Caso tenha dúvidas ou precise de ajuda, é só responder essa mensagem aqui no WhatsApp que estamos à disposição!\n\n` +
           `Atenciosamente,\n*Lane&Beleza*`;
+      } else {
+        toast.error("Não há fatura para enviar");
+        return;
       }
 
-      const invoiceMonth = format(client.next_due_date, "yyyy-MM-dd");
+      const invoiceMonth = overdueDebt 
+        ? format(new Date(overdueDebt.transaction_date), "yyyy-MM-dd")
+        : format(client.next_due_date!, "yyyy-MM-dd");
 
-      // Enviar mensagem via WhatsApp API
       const response = await fetch("https://evonovo.meusabia.com/message/sendText/detrancaruarushopping", {
         method: 'POST',
         headers: {
@@ -112,7 +105,6 @@ export function ClientRow({
         throw new Error("Erro ao enviar mensagem");
       }
 
-      // Atualizar o registro do último envio
       const { error: updateError } = await supabase
         .from('lblz_clients')
         .update({
@@ -123,7 +115,6 @@ export function ClientRow({
 
       if (updateError) throw updateError;
 
-      // Recarregar os dados dos clientes
       await queryClient.invalidateQueries({ queryKey: ['clients'] });
       toast.success("Fatura enviada com sucesso!");
     } catch (error) {
