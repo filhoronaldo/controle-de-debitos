@@ -167,9 +167,12 @@ export function ClientRow({
             <p className="font-medium">{client.name}</p>
             {getDueInfo()}
           </div>
-          <p className="text-sm text-muted-foreground">R$ {client.total_debt.toFixed(2)}</p>
+          <div className="flex items-center gap-2 mt-1">
+            <p className="text-sm text-muted-foreground">R$ {client.total_debt.toFixed(2)}</p>
+            {getStatusBadge(client.status)}
+          </div>
         </div>
-        <div className="flex items-center gap-2">
+        <div>
           <Button
             variant="outline"
             size="sm"
@@ -180,7 +183,6 @@ export function ClientRow({
             <Send className="h-4 w-4 mr-1" />
             Enviar Fatura
           </Button>
-          {getStatusBadge(client.status)}
         </div>
       </div>
       <div className="grid grid-cols-2 gap-2">
