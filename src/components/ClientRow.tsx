@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { CreateDebtDialog } from "./CreateDebtDialog";
 import { Client } from "@/types/client";
 import { supabase } from "@/integrations/supabase/client";
-import { format, isAfter, startOfMonth, parseISO } from "date-fns";
+import { format, isAfter, parseISO, setDate } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -27,6 +27,21 @@ export function ClientRow({
 
   const handleSendInvoice = async () => {
     try {
+      // Primeiro buscar o invoice_day do cliente
+      const { data: clientData, error: clientError } = await supabase
+        .from('lblz_clients')
+        .select('phone, invoice_day')
+        .eq('id', client.id)
+        .single();
+
+      if (clientError || !clientData?.phone) {
+        toast.error("Erro ao buscar dados do cliente");
+        return;
+      }
+
+      const invoiceDay = clientData.invoice_day || 1;
+
+      // Buscar todas as faturas em aberto do cliente
       const { data: debts, error: debtsError } = await supabase
         .from('lblz_debts')
         .select('*, lblz_payments(amount)')
@@ -40,17 +55,6 @@ export function ClientRow({
         return;
       }
 
-      const { data: clientData, error: clientError } = await supabase
-        .from('lblz_clients')
-        .select('phone')
-        .eq('id', client.id)
-        .single();
-
-      if (clientError || !clientData?.phone) {
-        toast.error("Erro ao buscar dados do cliente");
-        return;
-      }
-
       // Agrupar débitos por mês e calcular o total
       const monthlyDebts = debts?.reduce((acc, debt) => {
         if (!debt.invoice_month) return acc;
@@ -59,7 +63,6 @@ export function ClientRow({
         if (!acc[month]) {
           acc[month] = {
             total: 0,
-            dueDate: debt.transaction_date,
             debts: []
           };
         }
@@ -71,23 +74,24 @@ export function ClientRow({
         acc[month].total += (debt.amount - totalPayments);
         acc[month].debts.push(debt);
         return acc;
-      }, {} as Record<string, { total: number; dueDate: string | null; debts: typeof debts }>) || {};
+      }, {} as Record<string, { total: number; debts: typeof debts }>) || {};
 
       // Encontrar o primeiro mês com fatura em aberto e atrasada
       const today = new Date();
-      const overdueMonth = Object.entries(monthlyDebts).find(([month, data]) => {
-        if (!data.dueDate) return false;
-        return isAfter(today, new Date(data.dueDate));
+      const overdueMonth = Object.entries(monthlyDebts).find(([month]) => {
+        const dueDate = setDate(parseISO(month), invoiceDay);
+        return isAfter(today, dueDate);
       });
 
       let message = "";
       
       if (overdueMonth) {
         const [month, data] = overdueMonth;
-        const overdueDueDate = format(new Date(data.dueDate!), "dd/MM/yyyy");
+        const dueDate = format(setDate(parseISO(month), invoiceDay), "dd/MM/yyyy");
+        
         message = `Oi, ${client.name}! Tudo certo?\n\n` +
           `Só passando aqui pra te lembrar que o pagamento da sua fatura de R$ ${data.total.toFixed(2)}, ` +
-          `que venceu dia *${overdueDueDate}*, ainda não foi feito.\n\n` +
+          `que venceu dia *${dueDate}*, ainda não foi feito.\n\n` +
           `Se já pagou, só me avisa pra darmos baixa! Se ainda não conseguiu, me chama pra combinarmos o melhor jeito de acertar.\n\n` +
           `💰 *Opções de Pagamento*:\n` +
           `- Fatura em aberto: R$ ${data.total.toFixed(2)}\n` +
