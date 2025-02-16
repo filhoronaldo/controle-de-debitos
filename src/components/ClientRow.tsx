@@ -1,10 +1,11 @@
+
 import { Button } from "@/components/ui/button";
 import { CreditCard, History, User, Send } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { CreateDebtDialog } from "./CreateDebtDialog";
 import { Client } from "@/types/client";
 import { supabase } from "@/integrations/supabase/client";
-import { format, isAfter } from "date-fns";
+import { format, isAfter, startOfMonth, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -28,10 +29,10 @@ export function ClientRow({
     try {
       const { data: debts, error: debtsError } = await supabase
         .from('lblz_debts')
-        .select('*')
+        .select('*, lblz_payments(amount)')
         .eq('client_id', client.id)
         .eq('status', 'aberta')
-        .order('transaction_date', { ascending: true });
+        .order('invoice_month', { ascending: true });
 
       if (debtsError) {
         console.error('Error fetching debts:', debtsError);
@@ -50,20 +51,46 @@ export function ClientRow({
         return;
       }
 
-      const overdueDebt = debts?.find(debt => 
-        debt.transaction_date && isAfter(new Date(), new Date(debt.transaction_date))
-      );
+      // Agrupar débitos por mês e calcular o total
+      const monthlyDebts = debts?.reduce((acc, debt) => {
+        if (!debt.invoice_month) return acc;
+        
+        const month = debt.invoice_month;
+        if (!acc[month]) {
+          acc[month] = {
+            total: 0,
+            dueDate: debt.transaction_date,
+            debts: []
+          };
+        }
+        
+        // Calcular total de pagamentos para este débito
+        const totalPayments = (debt.lblz_payments || []).reduce((sum, payment) => 
+          sum + (payment.amount || 0), 0);
+        
+        acc[month].total += (debt.amount - totalPayments);
+        acc[month].debts.push(debt);
+        return acc;
+      }, {} as Record<string, { total: number; dueDate: string | null; debts: typeof debts }>) || {};
+
+      // Encontrar o primeiro mês com fatura em aberto e atrasada
+      const today = new Date();
+      const overdueMonth = Object.entries(monthlyDebts).find(([month, data]) => {
+        if (!data.dueDate) return false;
+        return isAfter(today, new Date(data.dueDate));
+      });
 
       let message = "";
       
-      if (overdueDebt) {
-        const overdueDueDate = format(new Date(overdueDebt.transaction_date), "dd/MM/yyyy");
+      if (overdueMonth) {
+        const [month, data] = overdueMonth;
+        const overdueDueDate = format(new Date(data.dueDate!), "dd/MM/yyyy");
         message = `Oi, ${client.name}! Tudo certo?\n\n` +
-          `Só passando aqui pra te lembrar que o pagamento da sua fatura de R$ ${overdueDebt.amount.toFixed(2)}, ` +
+          `Só passando aqui pra te lembrar que o pagamento da sua fatura de R$ ${data.total.toFixed(2)}, ` +
           `que venceu dia *${overdueDueDate}*, ainda não foi feito.\n\n` +
           `Se já pagou, só me avisa pra darmos baixa! Se ainda não conseguiu, me chama pra combinarmos o melhor jeito de acertar.\n\n` +
           `💰 *Opções de Pagamento*:\n` +
-          `- Fatura em aberto: R$ ${overdueDebt.amount.toFixed(2)}\n` +
+          `- Fatura em aberto: R$ ${data.total.toFixed(2)}\n` +
           `- Total devido: R$ ${client.total_debt.toFixed(2)}\n\n` +
           `Qualquer coisa, só mandar mensagem! Tamo junto. 😉\n\n` +
           `*Lane&Beleza*`;
@@ -85,8 +112,8 @@ export function ClientRow({
         return;
       }
 
-      const invoiceMonth = overdueDebt 
-        ? format(new Date(overdueDebt.transaction_date), "yyyy-MM-dd")
+      const invoiceMonth = overdueMonth 
+        ? overdueMonth[0]
         : format(client.next_due_date!, "yyyy-MM-dd");
 
       const response = await fetch("https://evonovo.meusabia.com/message/sendText/detrancaruarushopping", {
@@ -96,7 +123,7 @@ export function ClientRow({
           'apikey': 'd87d8d927b31c4166af041bcf6d14cf0'
         },
         body: JSON.stringify({
-          number: clientData.phone.replace(/\D/g, ''), // Remove caracteres não numéricos
+          number: clientData.phone.replace(/\D/g, ''),
           text: message
         })
       });
