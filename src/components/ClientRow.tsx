@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { CreateDebtDialog } from "./CreateDebtDialog";
 import { Client } from "@/types/client";
 import { supabase } from "@/integrations/supabase/client";
-import { format, isAfter, parseISO, setDate } from "date-fns";
+import { format, isAfter, parseISO, setDate, startOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -116,9 +116,10 @@ export function ClientRow({
         return;
       }
 
+      // Garantir que o mês seja sempre o primeiro dia do mês
       const invoiceMonth = overdueMonth 
-        ? overdueMonth[0]
-        : format(client.next_due_date!, "yyyy-MM-dd");
+        ? startOfMonth(parseISO(overdueMonth[0])).toISOString().split('T')[0]
+        : startOfMonth(client.next_due_date!).toISOString().split('T')[0];
 
       const response = await fetch("https://evonovo.meusabia.com/message/sendText/detrancaruarushopping", {
         method: 'POST',
@@ -191,7 +192,7 @@ export function ClientRow({
 
     const lastInvoiceInfo = client.last_invoice_sent_month ? (
       <span className="text-gray-500 ml-2">
-        (Última fatura: {format(new Date(client.last_invoice_sent_month), "MMM/yy", { locale: ptBR })})
+        (Última fatura: {format(startOfMonth(parseISO(client.last_invoice_sent_month)), "MMM/yy", { locale: ptBR })})
       </span>
     ) : null;
 
