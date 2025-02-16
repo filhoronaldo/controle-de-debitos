@@ -100,17 +100,13 @@ export function ClientRow({
           `*Lane&Beleza*`;
       } else if (client.next_due_date && client.next_invoice_amount) {
         const dueDate = format(client.next_due_date, "dd/MM/yyyy");
-        message = `Olá, ${client.name}!\n\n` +
-          `Gostaria de lembrá-lo que o nosso combinado para este mês vence no dia *${dueDate}*.\n\n` +
-          `Você pode efetuar o pagamento da fatura deste mês no valor de *R$ ${client.next_invoice_amount.toFixed(2)}*. ` +
-          `Caso prefira, também tem a opção de quitar um valor maior, contribuindo para reduzir seu débito total, ` +
-          `que atualmente está em *R$ ${client.total_debt.toFixed(2)}*.\n\n` +
-          `👉 *Opções de Pagamento*:\n` +
+        message = `Oi, ${client.name}! Tudo bem? 😊\n\n` +
+          `Passando pra te lembrar que nosso combinado deste mês vence dia *${dueDate}*!\n\n` +
+          `Você pode pagar a fatura de *R$ ${client.next_invoice_amount.toFixed(2)}* ou, se quiser, antecipar um valor maior e já diminuir o total pendente, que hoje está em *R$ ${client.total_debt.toFixed(2)}*.\n\n` +
+          `💰 *Opções de Pagamento*:\n` +
           `- Mínimo (Fatura deste mês): R$ ${client.next_invoice_amount.toFixed(2)}\n` +
-          `- Total Devido: R$ ${client.total_debt.toFixed(2)}\n\n` +
-          `Quanto maior o valor pago, mais próximo você fica de liquidar seu débito total! 😊\n\n` +
-          `Caso tenha dúvidas ou precise de ajuda, é só responder essa mensagem aqui no WhatsApp que estamos à disposição!\n\n` +
-          `Atenciosamente,\n*Lane&Beleza*`;
+          `- Total Devido: R$ ${client.total_debt.toFixed(2)}\n\n`
+          `Se precisar de algo ou tiver dúvidas, é só chamar! Estamos por aqui. 😉\n*Lane&Beleza*`;
       } else {
         toast.error("Não há fatura para enviar");
         return;
