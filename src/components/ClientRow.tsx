@@ -100,7 +100,7 @@ export function ClientRow({
           `*Lane&Beleza*`;
       } else if (client.next_due_date && client.next_invoice_amount) {
         const dueDate = format(client.next_due_date, "dd/MM/yyyy");
-        message = `Olá, ${client.name}!\n\n` +
+        message = `Oi, ${client.name}!Tudo bem? 😊\n\n` +
           `Gostaria de lembrá-lo que o nosso combinado para este mês vence no dia *${dueDate}*.\n\n` +
           `Você pode efetuar o pagamento da fatura deste mês no valor de *R$ ${client.next_invoice_amount.toFixed(2)}*. ` +
           `Caso prefira, também tem a opção de quitar um valor maior, contribuindo para reduzir seu débito total, ` +
