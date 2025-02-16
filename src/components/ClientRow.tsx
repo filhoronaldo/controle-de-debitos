@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { CreateDebtDialog } from "./CreateDebtDialog";
 import { Client } from "@/types/client";
 import { supabase } from "@/integrations/supabase/client";
-import { format, isAfter, parseISO, setDate, startOfMonth } from "date-fns";
+import { format, isAfter, parseISO, setDate, startOfMonth, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -181,13 +181,29 @@ export function ClientRow({
   };
 
   const getDueInfo = () => {
-    if (!client.days_until_due || !client.next_invoice_amount) return null;
+    if (!client.next_invoice_amount) return null;
 
     let colorClass = "text-green-600";
-    if (client.days_until_due <= 3) {
+    let dueText = "";
+
+    if (client.status === 'atrasado' || client.status === 'atrasado_parcial') {
+      const daysOverdue = Math.abs(client.days_until_due || 0);
       colorClass = "text-red-600";
-    } else if (client.days_until_due <= 7) {
-      colorClass = "text-orange-500";
+      dueText = daysOverdue === 1 
+        ? "Vencido há 1 dia" 
+        : `Vencido há ${daysOverdue} dias`;
+    } else if (client.days_until_due !== undefined) {
+      if (client.days_until_due <= 3) {
+        colorClass = "text-red-600";
+      } else if (client.days_until_due <= 7) {
+        colorClass = "text-orange-500";
+      }
+
+      dueText = client.days_until_due === 0 
+        ? "Vence hoje"
+        : client.days_until_due === 1 
+        ? "Vence amanhã"
+        : `Vence em ${client.days_until_due} dias`;
     }
 
     const lastInvoiceInfo = client.last_invoice_sent_month ? (
@@ -199,13 +215,7 @@ export function ClientRow({
     return (
       <div className="flex items-center gap-2">
         <div className={`text-xs ${colorClass}`}>
-          {client.days_until_due === 0 ? (
-            "Vence hoje"
-          ) : client.days_until_due === 1 ? (
-            "Vence amanhã"
-          ) : (
-            `Vence em ${client.days_until_due} dias`
-          )}
+          {dueText}
           {client.next_invoice_amount > 0 && (
             <span className="ml-2">
               (R$ {client.next_invoice_amount.toFixed(2)})
@@ -236,7 +246,7 @@ export function ClientRow({
             size="sm"
             onClick={handleSendInvoice}
             className="h-8"
-            disabled={!client.next_invoice_amount}
+            disabled={!client.next_invoice_amount && client.status !== 'atrasado' && client.status !== 'atrasado_parcial'}
           >
             <Send className="h-4 w-4 mr-1" />
             Enviar Fatura
