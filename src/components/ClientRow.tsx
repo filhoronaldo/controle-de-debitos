@@ -181,14 +181,22 @@ export function ClientRow({
   };
 
   const getDueInfo = () => {
-    if (!client.next_invoice_amount) return null;
+    // Não retornar null se tivermos fatura atrasada, mesmo sem fatura futura
+    if (!client.next_invoice_amount && client.status !== 'atrasado' && client.status !== 'atrasado_parcial') {
+      return null;
+    }
 
     let colorClass = "text-green-600";
     let dueText = "";
+    let amount = client.next_invoice_amount || 0;
 
     if (client.status === 'atrasado' || client.status === 'atrasado_parcial') {
-      const daysOverdue = Math.abs(client.days_until_due || 0);
       colorClass = "text-red-600";
+      // Buscar o valor da fatura vencida
+      const overdueAmount = client.total_debt - (client.next_invoice_amount || 0);
+      amount = overdueAmount;
+      
+      const daysOverdue = Math.abs(client.days_overdue || 0);
       dueText = daysOverdue === 1 
         ? "Vencido há 1 dia" 
         : `Vencido há ${daysOverdue} dias`;
@@ -216,9 +224,9 @@ export function ClientRow({
       <div className="flex items-center gap-2">
         <div className={`text-xs ${colorClass}`}>
           {dueText}
-          {client.next_invoice_amount > 0 && (
+          {amount > 0 && (
             <span className="ml-2">
-              (R$ {client.next_invoice_amount.toFixed(2)})
+              (R$ {amount.toFixed(2)})
             </span>
           )}
         </div>
