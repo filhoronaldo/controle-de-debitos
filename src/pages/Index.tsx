@@ -10,7 +10,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { startOfDay, endOfDay } from "date-fns";
 import { formatCurrency } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
-import CompactDashboardCard from "@/components/CompactDashboardCard";
 
 const Index = () => {
   const isMobile = useIsMobile();
@@ -77,17 +76,17 @@ const Index = () => {
 
       {/* Dashboard Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        <CompactDashboardCard
+        <DashboardCard
           title="Débitos"
           value={totalDebt || 0}
           isPositive={false}
         />
-        <CompactDashboardCard
+        <DashboardCard
           title="Clientes"
           value={totalClients || 0}
           isPositive={true}
         />
-        <CompactDashboardCard
+        <DashboardCard
           title="Hoje"
           value={todayPayments || 0}
           isPositive={true}
