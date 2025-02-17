@@ -126,7 +126,9 @@ export function ClientRow({
           'apikey': 'd87d8d927b31c4166af041bcf6d14cf0'
         },
         body: JSON.stringify({
-          number: clientData.phone.replace(/\D/g, ''),
+          number: clientData.phone.replace(/\D/g, '').startsWith('55') 
+          ? clientData.phone.replace(/\D/g, '') // Já começa com "55"
+          : '55' + clientData.phone.replace(/\D/g, ''), // Adiciona "55" na frente
           text: message
         })
       });
