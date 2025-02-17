@@ -107,9 +107,8 @@ export function ClientRow({
           `👉 *Opções de Pagamento*:\n` +
           `- Mínimo (Fatura deste mês): R$ ${client.next_invoice_amount.toFixed(2)}\n` +
           `- Total Devido: R$ ${client.total_debt.toFixed(2)}\n\n` +
-          `Quanto maior o valor pago, mais próximo você fica de liquidar seu débito total! 😊\n\n` +
-          `Caso tenha dúvidas ou precise de ajuda, é só responder essa mensagem aqui no WhatsApp que estamos à disposição!\n\n` +
-          `Atenciosamente,\n*Lane&Beleza*`;
+          `Se precisar de algo ou tiver dúvidas, é só chamar! Estamos por aqui. 😉\n\n` +
+          `*Lane&Beleza*`;
       } else {
         toast.error("Não há fatura para enviar");
         return;
