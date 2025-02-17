@@ -130,7 +130,7 @@ export function ClientList() {
             if (isAfter(currentDate, dueDate)) {
               if (!lastOverdueMonth || isAfter(debtMonth, lastOverdueMonth)) {
                 lastOverdueMonth = debtMonth;
-                daysOverdue = differenceInDays(currentDate, dueDate) + 1;
+                daysOverdue = differenceInDays(currentDate, dueDate);
                 overdueAmount = remainingAmount;
               }
               
