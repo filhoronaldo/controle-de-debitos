@@ -58,6 +58,8 @@ export function ClientList() {
         let hasPartialOverdueDebts = false;
         let hasPendingDebts = false;
         const invoiceDay = client.invoice_day || 1;
+        let daysOverdue = 0;
+        let overdueAmount = 0;
 
         // Calculate next due date
         const nextDueDate = setMilliseconds(
@@ -90,16 +92,20 @@ export function ClientList() {
         let nextInvoiceAmount = 0;
         const nextInvoiceMonth = format(nextDueDate, 'yyyy-MM');
 
+        // Find the most recent overdue month
+        let lastOverdueMonth: Date | null = null;
+
         debts.forEach((debt: any) => {
           const debtAmount = Number(debt.amount);
           const totalPayments = (debt.lblz_payments || []).reduce((sum: number, payment: any) => 
             sum + Number(payment.amount), 0);
+          const remainingAmount = debtAmount - totalPayments;
 
-          totalDebt += (debtAmount - totalPayments);
+          totalDebt += remainingAmount;
 
           // Add to next invoice amount if the debt is for the next due month
           if (debt.invoice_month?.startsWith(nextInvoiceMonth)) {
-            nextInvoiceAmount += (debtAmount - totalPayments);
+            nextInvoiceAmount += remainingAmount;
           }
 
           const debtMonth = startOfMonth(parseISO(debt.invoice_month));
@@ -107,20 +113,12 @@ export function ClientList() {
           const isCurrentMonth = debtMonth.getTime() === currentMonth.getTime();
           const hasPartialPayment = totalPayments > 0 && totalPayments < debtAmount;
           
-          if (isPastMonth) {
-            if (hasPartialPayment) {
-              hasPartialOverdueDebts = true;
-            } else if (debt.status === 'parcial' || debt.status === 'aberta') {
-              hasOverdueDebts = true;
-            }
-          }
-          
-          if (isCurrentMonth && debt.status !== 'paga') {
+          if ((isPastMonth || isCurrentMonth) && (debt.status === 'parcial' || debt.status === 'aberta')) {
             const dueDate = setMilliseconds(
               setSeconds(
                 setMinutes(
                   setHours(
-                    new Date(currentDate.getFullYear(), currentDate.getMonth(), invoiceDay),
+                    new Date(debtMonth.getFullYear(), debtMonth.getMonth(), invoiceDay),
                     23
                   ),
                   59
@@ -131,6 +129,12 @@ export function ClientList() {
             );
             
             if (isAfter(currentDate, dueDate)) {
+              if (!lastOverdueMonth || isAfter(debtMonth, lastOverdueMonth)) {
+                lastOverdueMonth = debtMonth;
+                daysOverdue = Math.abs(differenceInDays(currentDate, dueDate));
+                overdueAmount = remainingAmount;
+              }
+              
               if (hasPartialPayment) {
                 hasPartialOverdueDebts = true;
               } else {
@@ -160,7 +164,9 @@ export function ClientList() {
           status,
           next_due_date: nextDueDate,
           days_until_due: daysUntilDue,
+          days_overdue: daysOverdue,
           next_invoice_amount: nextInvoiceAmount,
+          overdue_amount: overdueAmount,
           last_invoice_sent_at: client.last_invoice_sent_at,
           last_invoice_sent_month: client.last_invoice_sent_month
         };

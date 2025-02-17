@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { CreditCard, History, User, Send } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -181,26 +180,25 @@ export function ClientRow({
   };
 
   const getDueInfo = () => {
-    // Não retornar null se tivermos fatura atrasada, mesmo sem fatura futura
-    if (!client.next_invoice_amount && client.status !== 'atrasado' && client.status !== 'atrasado_parcial') {
+    // Não retornar null se tivermos fatura atrasada
+    if (!client.next_invoice_amount && !client.overdue_amount) {
       return null;
     }
 
     let colorClass = "text-green-600";
     let dueText = "";
-    let amount = client.next_invoice_amount || 0;
+    let amount: number;
 
     if (client.status === 'atrasado' || client.status === 'atrasado_parcial') {
       colorClass = "text-red-600";
-      // Buscar o valor da fatura vencida
-      const overdueAmount = client.total_debt - (client.next_invoice_amount || 0);
-      amount = overdueAmount;
+      amount = client.overdue_amount;
       
-      const daysOverdue = Math.abs(client.days_until_due || 0);
-      dueText = daysOverdue === 1 
+      dueText = client.days_overdue === 1 
         ? "Vencido há 1 dia" 
-        : `Vencido há ${daysOverdue} dias`;
+        : `Vencido há ${client.days_overdue} dias`;
     } else if (client.days_until_due !== undefined) {
+      amount = client.next_invoice_amount || 0;
+      
       if (client.days_until_due <= 3) {
         colorClass = "text-red-600";
       } else if (client.days_until_due <= 7) {
@@ -224,9 +222,9 @@ export function ClientRow({
       <div className="flex items-center gap-2">
         <div className={`text-xs ${colorClass}`}>
           {dueText}
-          {amount > 0 && (
+          {amount! > 0 && (
             <span className="ml-2">
-              (R$ {amount.toFixed(2)})
+              (R$ {amount!.toFixed(2)})
             </span>
           )}
         </div>
@@ -254,7 +252,7 @@ export function ClientRow({
             size="sm"
             onClick={handleSendInvoice}
             className="h-8"
-            disabled={!client.next_invoice_amount && client.status !== 'atrasado' && client.status !== 'atrasado_parcial'}
+            disabled={!client.next_invoice_amount && !client.overdue_amount}
           >
             <Send className="h-4 w-4 mr-1" />
             Enviar Fatura
