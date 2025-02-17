@@ -5,7 +5,7 @@ import { Badge } from "@/components/ui/badge";
 import { CreateDebtDialog } from "./CreateDebtDialog";
 import { Client } from "@/types/client";
 import { supabase } from "@/integrations/supabase/client";
-import { format, isAfter, parseISO, setDate, startOfMonth, differenceInDays } from "date-fns";
+import { format, isAfter, parseISO, setDate, startOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
@@ -196,7 +196,7 @@ export function ClientRow({
       const overdueAmount = client.total_debt - (client.next_invoice_amount || 0);
       amount = overdueAmount;
       
-      const daysOverdue = Math.abs(client.days_overdue || 0);
+      const daysOverdue = Math.abs(client.days_until_due || 0);
       dueText = daysOverdue === 1 
         ? "Vencido há 1 dia" 
         : `Vencido há ${daysOverdue} dias`;
