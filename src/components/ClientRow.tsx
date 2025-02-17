@@ -1,5 +1,5 @@
 import { Button } from "@/components/ui/button";
-import { CreditCard, History, User, Send } from "lucide-react";
+import { CreditCard, History, User, Send, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { CreateDebtDialog } from "./CreateDebtDialog";
 import { Client } from "@/types/client";
@@ -8,6 +8,7 @@ import { format, isAfter, parseISO, setDate, startOfMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 
 interface ClientRowProps {
   client: Client;
@@ -23,9 +24,11 @@ export function ClientRow({
   onViewHistory,
 }: ClientRowProps) {
   const queryClient = useQueryClient();
+  const [isSending, setIsSending] = useState(false);
 
   const handleSendInvoice = async () => {
     try {
+      setIsSending(true);
       // Primeiro buscar o invoice_day do cliente
       const { data: clientData, error: clientError } = await supabase
         .from('lblz_clients')
@@ -111,6 +114,7 @@ export function ClientRow({
           `*Lane&Beleza*`;
       } else {
         toast.error("Não há fatura para enviar");
+        setIsSending(false);
         return;
       }
 
@@ -152,6 +156,8 @@ export function ClientRow({
     } catch (error) {
       console.error('Error sending invoice:', error);
       toast.error("Erro ao enviar fatura");
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -253,10 +259,14 @@ export function ClientRow({
             size="sm"
             onClick={handleSendInvoice}
             className="h-8"
-            disabled={!client.next_invoice_amount && !client.overdue_amount}
+            disabled={(!client.next_invoice_amount && !client.overdue_amount) || isSending}
           >
-            <Send className="h-4 w-4 mr-1" />
-            Enviar Fatura
+            {isSending ? (
+              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+            ) : (
+              <Send className="h-4 w-4 mr-1" />
+            )}
+            {isSending ? "Enviando..." : "Enviar Fatura"}
           </Button>
         </div>
       </div>
