@@ -62,48 +62,48 @@ const Index = () => {
   });
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-6 animate-fadeIn max-w-full md:max-w-7xl">
+    <div className="container mx-auto px-4 py-6 space-y-4 animate-fadeIn max-w-full md:max-w-7xl">
       {/* Header */}
       <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-        <h1 className="text-xl md:text-2xl font-bold text-primary flex items-center gap-2">
-          <DollarSign className="h-5 w-5" />
+        <h1 className="text-lg md:text-xl font-bold text-primary flex items-center gap-2">
+          <DollarSign className="h-4 w-4" />
           Controle de Débitos
         </h1>
         <CreateClientDialog />
       </div>
 
       {/* Dashboard Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         <DashboardCard
           title="Débitos"
           value={formatCurrency(totalDebt || 0)}
-          icon={<DollarSign className="h-4 w-4 text-muted-foreground" />}
-          className="bg-card text-card-foreground shadow-sm rounded-md p-4"
+          icon={<DollarSign className="h-3 w-3 text-muted-foreground" />}
+          className="bg-card text-card-foreground shadow-sm rounded-md p-3 text-sm"
         />
         <DashboardCard
           title="Clientes"
           value={totalClients || 0}
-          icon={<User className="h-4 w-4 text-muted-foreground" />}
-          className="bg-card text-card-foreground shadow-sm rounded-md p-4"
+          icon={<User className="h-3 w-3 text-muted-foreground" />}
+          className="bg-card text-card-foreground shadow-sm rounded-md p-3 text-sm"
         />
         <DashboardCard
           title="Hoje"
           value={formatCurrency(todayPayments || 0)}
-          icon={<CreditCard className="h-4 w-4 text-muted-foreground" />}
-          className="bg-card text-card-foreground shadow-sm rounded-md p-4"
+          icon={<CreditCard className="h-3 w-3 text-muted-foreground" />}
+          className="bg-card text-card-foreground shadow-sm rounded-md p-3 text-sm"
         />
       </div>
 
       {/* Client List Section */}
       <div className="space-y-4">
         <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-          <h2 className="text-lg md:text-xl font-semibold">Lista de Clientes</h2>
+          <h2 className="text-base md:text-lg font-semibold">Lista de Clientes</h2>
           {!isMobile && (
             <Button
               variant="outline"
-              className="w-full md:w-auto mx-auto md:mx-0"
+              className="w-full md:w-auto mx-auto md:mx-0 text-xs md:text-sm"
             >
-              <Receipt className="h-4 w-4 mr-2" />
+              <Receipt className="h-3 w-3 mr-1 md:mr-2" />
               Exportar Relatório
             </Button>
           )}
