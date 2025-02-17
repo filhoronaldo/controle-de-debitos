@@ -63,38 +63,38 @@ const Index = () => {
   });
 
   return (
-    <div className="container mx-auto px-4 py-6 space-y-6 animate-fadeIn max-w-full md:max-w-7xl">
-      <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-        <h1 className="text-2xl md:text-3xl font-heading font-bold">Controle de Débitos</h1>
+    <div className="container mx-auto px-2 py-4 space-y-4 animate-fadeIn max-w-full md:max-w-7xl">
+      <div className="flex flex-col md:flex-row justify-between items-center gap-3">
+        <h1 className="text-xl md:text-3xl font-heading font-bold">Controle de Débitos</h1>
         <CreateClientDialog />
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
         <DashboardCard
           title="Total de Débitos"
           value={formatCurrency(totalDebt || 0)}
-          icon={<DollarSign className="h-4 w-4 text-muted-foreground" />}
+          icon={<DollarSign className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />}
         />
         <DashboardCard
           title="Clientes Ativos"
           value={totalClients || 0}
-          icon={<User className="h-4 w-4 text-muted-foreground" />}
+          icon={<User className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />}
         />
         <DashboardCard
           title="Pagamentos Hoje"
           value={formatCurrency(todayPayments || 0)}
-          icon={<CreditCard className="h-4 w-4 text-muted-foreground" />}
+          icon={<CreditCard className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />}
         />
         <DashboardCard
           title="Faturas em Aberto"
           value="5"
-          icon={<Receipt className="h-4 w-4 text-muted-foreground" />}
+          icon={<Receipt className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />}
         />
       </div>
 
-      <div className="space-y-4">
-        <div className="flex flex-col md:flex-row justify-between items-center gap-4">
-          <h2 className="text-xl font-heading font-semibold">Lista de Clientes</h2>
+      <div className="space-y-3">
+        <div className="flex flex-col md:flex-row justify-between items-center gap-3">
+          <h2 className="text-lg md:text-xl font-heading font-semibold">Lista de Clientes</h2>
           {!isMobile && (
             <Button variant="outline" className="w-full md:w-auto">
               <Receipt className="h-4 w-4 mr-2" />
