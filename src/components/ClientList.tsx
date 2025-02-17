@@ -1,4 +1,3 @@
-
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
@@ -119,19 +118,19 @@ export function ClientList() {
                 setMinutes(
                   setHours(
                     new Date(debtMonth.getFullYear(), debtMonth.getMonth(), invoiceDay),
-                    23
+                    0
                   ),
-                  59
+                  0
                 ),
-                59
+                0
               ),
-              999
+              0
             );
             
             if (isAfter(currentDate, dueDate)) {
               if (!lastOverdueMonth || isAfter(debtMonth, lastOverdueMonth)) {
                 lastOverdueMonth = debtMonth;
-                daysOverdue = Math.abs(differenceInDays(currentDate, dueDate));
+                daysOverdue = differenceInDays(currentDate, dueDate) + 1;
                 overdueAmount = remainingAmount;
               }
               
