@@ -1,3 +1,5 @@
+// Index.tsx
+
 import { DashboardCard } from "@/components/DashboardCard";
 import { ClientList } from "@/components/ClientList";
 import { Button } from "@/components/ui/button";
@@ -8,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { startOfDay, endOfDay } from "date-fns";
 import { formatCurrency } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
+import CompactDashboardCard from "@/components/CompactDashboardCard";
 
 const Index = () => {
   const isMobile = useIsMobile();
@@ -74,23 +77,20 @@ const Index = () => {
 
       {/* Dashboard Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        <DashboardCard
+        <CompactDashboardCard
           title="Débitos"
-          value={formatCurrency(totalDebt || 0)}
-          icon={<DollarSign className="h-3 w-3 text-muted-foreground" />}
-          className="bg-card text-card-foreground shadow-sm rounded-md p-3 text-sm"
+          value={totalDebt || 0}
+          isPositive={false}
         />
-        <DashboardCard
+        <CompactDashboardCard
           title="Clientes"
           value={totalClients || 0}
-          icon={<User className="h-3 w-3 text-muted-foreground" />}
-          className="bg-card text-card-foreground shadow-sm rounded-md p-3 text-sm"
+          isPositive={true}
         />
-        <DashboardCard
+        <CompactDashboardCard
           title="Hoje"
-          value={formatCurrency(todayPayments || 0)}
-          icon={<CreditCard className="h-3 w-3 text-muted-foreground" />}
-          className="bg-card text-card-foreground shadow-sm rounded-md p-3 text-sm"
+          value={todayPayments || 0}
+          isPositive={true}
         />
       </div>
 
