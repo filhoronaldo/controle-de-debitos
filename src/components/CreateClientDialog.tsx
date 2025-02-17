@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,10 @@ const formSchema = z.object({
   name: z.string().min(1, "Nome é obrigatório"),
   phone: z.string().min(1, "Telefone é obrigatório"),
   is_whatsapp: z.boolean().default(true),
+  document: z.string().optional(),
+  address: z.string().optional(),
+  city: z.string().default("CARUARU"),
+  state: z.string().default("PE"),
 });
 
 type CreateClientForm = z.infer<typeof formSchema>;
@@ -43,6 +48,10 @@ export function CreateClientDialog() {
       is_whatsapp: true,
       name: "",
       phone: "",
+      document: "",
+      address: "",
+      city: "CARUARU",
+      state: "PE",
     },
   });
 
@@ -55,6 +64,10 @@ export function CreateClientDialog() {
         name: data.name,
         phone: phoneNumbers,
         is_whatsapp: data.is_whatsapp,
+        document: data.document,
+        address: data.address,
+        city: data.city,
+        state: data.state,
       });
 
       if (error) throw error;
@@ -108,6 +121,26 @@ export function CreateClientDialog() {
               )}
             />
 
+            {/* Campo CPF */}
+            <FormField
+              control={form.control}
+              name="document"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm md:text-base">CPF</FormLabel>
+                  <FormControl>
+                    <ReactInputMask
+                      mask="999.999.999-99"
+                      className="flex h-12 w-full rounded-md border border-input bg-background px-3 py-2 text-base md:text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      placeholder="000.000.000-00"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage className="text-xs text-destructive" />
+                </FormItem>
+              )}
+            />
+
             {/* Campo Telefone */}
             <FormField
               control={form.control}
@@ -121,6 +154,65 @@ export function CreateClientDialog() {
                       className="flex h-12 w-full rounded-md border border-input bg-background px-3 py-2 text-base md:text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium file:text-foreground placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       placeholder="(00) 00000-0000"
                       {...field}
+                    />
+                  </FormControl>
+                  <FormMessage className="text-xs text-destructive" />
+                </FormItem>
+              )}
+            />
+
+            {/* Campo Endereço */}
+            <FormField
+              control={form.control}
+              name="address"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm md:text-base">Endereço</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Endereço completo"
+                      className="text-base md:text-sm"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage className="text-xs text-destructive" />
+                </FormItem>
+              )}
+            />
+
+            {/* Campo Cidade */}
+            <FormField
+              control={form.control}
+              name="city"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm md:text-base">Cidade</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Cidade"
+                      className="text-base md:text-sm"
+                      {...field}
+                    />
+                  </FormControl>
+                  <FormMessage className="text-xs text-destructive" />
+                </FormItem>
+              )}
+            />
+
+            {/* Campo Estado */}
+            <FormField
+              control={form.control}
+              name="state"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-sm md:text-base">Estado</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="Estado"
+                      className="text-base md:text-sm"
+                      maxLength={2}
+                      {...field}
+                      onChange={(e) => field.onChange(e.target.value.toUpperCase())}
                     />
                   </FormControl>
                   <FormMessage className="text-xs text-destructive" />
