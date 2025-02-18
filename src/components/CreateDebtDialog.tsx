@@ -18,15 +18,15 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { UserPlus, PackagePlus, Plus, Minus, ArrowLeftRight } from "lucide-react";
+import { UserPlus, Plus, Minus, ArrowLeftRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/components/ui/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import ReactInputMask from "react-input-mask";
 import { addMonths, format, parse } from "date-fns";
 import { Textarea } from "@/components/ui/textarea";
+import { Json } from "@/integrations/supabase/types";
 
 const productSchema = z.object({
   description: z.string().optional(),
@@ -137,13 +137,19 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
             ? `${data.description} ${originalAmountText} (${index + 1}/${data.installments})`
             : `Parcela ${originalAmountText} (${index + 1}/${data.installments})`;
             
+          // Garantir que os produtos tenham a estrutura correta
+          const formattedProducts = isProductMode ? products.map((product, idx) => ({
+            description: product.description || `Produto ${idx + 1}`,
+            value: product.value
+          })) : null;
+
           return {
             client_id: clientId,
             amount: installmentAmount,
             description: description,
             transaction_date: data.transaction_date,
             invoice_month: format(installmentMonth, 'yyyy-MM-01'),
-            products: isProductMode ? products : null,
+            products: formattedProducts as Json
           };
         });
 
@@ -158,6 +164,12 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
           description: `${data.installments}x de ${formatCurrency(installmentAmount)} para ${clientName}`,
         });
       } else {
+        // Garantir que os produtos tenham a estrutura correta
+        const formattedProducts = isProductMode ? products.map((product, idx) => ({
+          description: product.description || `Produto ${idx + 1}`,
+          value: product.value
+        })) : null;
+
         const { error } = await supabase
           .from('lblz_debts')
           .insert({
@@ -166,7 +178,7 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
             description: data.description,
             transaction_date: data.transaction_date,
             invoice_month: data.invoice_month ? `${data.invoice_month}-01` : null,
-            products: isProductMode ? products : null,
+            products: formattedProducts as Json
           });
 
         if (error) throw error;
