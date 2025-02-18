@@ -1,4 +1,6 @@
+
 import { useState } from "react";
+import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -16,91 +18,118 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { ChevronLeft, ChevronRight, PlusCircle } from "lucide-react";
-import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { zodResolver } from "@hookform/resolvers/zod";
+import { UserPlus, PackagePlus, Plus, Minus, ArrowLeftRight } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useToast } from "@/hooks/use-toast";
-import { useQueryClient } from "@tanstack/react-query";
-import { Textarea } from "@/components/ui/textarea";
-import { Switch } from "@/components/ui/switch";
+import { useToast } from "@/components/ui/use-toast";
+import { Checkbox } from "@/components/ui/checkbox";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import ReactInputMask from "react-input-mask";
 import { addMonths, format, parse } from "date-fns";
+import { Textarea } from "@/components/ui/textarea";
 
-const debtFormSchema = z.object({
+const productSchema = z.object({
+  description: z.string().optional(),
+  value: z.coerce.number().min(0.01, "O valor deve ser maior que zero"),
+});
+
+const formSchema = z.object({
   amount: z.coerce.number().min(0.01, "O valor deve ser maior que zero"),
+  phone: z.string().min(1, "Telefone é obrigatório"),
+  is_whatsapp: z.boolean().default(true),
+  document: z.string().optional(),
   description: z.string().optional(),
   transaction_date: z.string().optional(),
   invoice_month: z.string().optional(),
   installments: z.coerce.number().min(1).max(48),
   useInstallments: z.boolean(),
+  products: z.array(productSchema).optional(),
 });
 
-type DebtFormValues = z.infer<typeof debtFormSchema>;
+type CreateClientForm = z.infer<typeof formSchema>;
 
-interface CreateDebtDialogProps {
-  clientId: string;
-  clientName: string;
+interface Product {
+  description: string;
+  value: number;
 }
 
-export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps) {
+export function CreateDebtDialog({ clientId, clientName }: { clientId: string, clientName: string }) {
+  const [open, setOpen] = useState(false);
+  const [isProductMode, setIsProductMode] = useState(false);
+  const [products, setProducts] = useState<Product[]>([{ description: "", value: 0 }]);
   const { toast } = useToast();
-  const queryClient = useQueryClient();
-  const form = useForm<DebtFormValues>({
-    resolver: zodResolver(debtFormSchema),
+
+  const form = useForm<CreateClientForm>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
+      useInstallments: false,
       amount: 0,
       description: "",
       transaction_date: new Date().toLocaleDateString('en-CA'),
       invoice_month: new Date().toISOString().split('T')[0].substring(0, 7),
       installments: 1,
-      useInstallments: false,
+      products: [],
     },
   });
 
-  const formatCurrency = (value: string | number) => {
-    const numberValue = typeof value === 'string' ? parseCurrencyToNumber(value) : value;
+  const toggleMode = () => {
+    setIsProductMode(!isProductMode);
+    if (!isProductMode) {
+      // Entrando no modo produto
+      form.setValue('amount', 0);
+      calculateTotalFromProducts();
+    } else {
+      // Saindo do modo produto
+      setProducts([{ description: "", value: 0 }]);
+    }
+  };
+
+  const addProduct = () => {
+    setProducts([...products, { description: "", value: 0 }]);
+  };
+
+  const removeProduct = (index: number) => {
+    if (products.length > 1) {
+      const newProducts = [...products];
+      newProducts.splice(index, 1);
+      setProducts(newProducts);
+      calculateTotalFromProducts(newProducts);
+    }
+  };
+
+  const updateProduct = (index: number, field: keyof Product, value: string | number) => {
+    const newProducts = [...products];
+    if (field === 'value') {
+      // Converter string de moeda para número
+      const numericValue = typeof value === 'string' 
+        ? Number(value.replace(/[^\d,]/g, '').replace(',', '.')) / 100
+        : value;
+      newProducts[index][field] = numericValue;
+    } else {
+      newProducts[index][field] = value as string;
+    }
+    setProducts(newProducts);
+    calculateTotalFromProducts(newProducts);
+  };
+
+  const calculateTotalFromProducts = (currentProducts = products) => {
+    const total = currentProducts.reduce((sum, product) => sum + (product.value || 0), 0);
+    form.setValue('amount', total);
+  };
+
+  const formatCurrency = (value: number): string => {
     return new Intl.NumberFormat('pt-BR', {
       style: 'currency',
       currency: 'BRL',
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    }).format(numberValue);
+    }).format(value);
   };
 
-  const parseCurrencyToNumber = (value: string) => {
-    const numbers = value.replace(/\D/g, "");
-    return numbers ? parseFloat(numbers) / 100 : 0;
-  };
-
-  const navigateMonth = (direction: 'next' | 'previous') => {
-    const currentMonth = form.getValues('invoice_month') || new Date().toISOString().split('T')[0].substring(0, 7);
-    const [year, month] = currentMonth.split('-').map(Number);
-    
-    let newDate = new Date(year, month - 1);
-    if (direction === 'next') {
-      newDate.setMonth(newDate.getMonth() + 1);
-    } else {
-      newDate.setMonth(newDate.getMonth() - 1);
-    }
-    
-    const newMonth = `${newDate.getFullYear()}-${String(newDate.getMonth() + 1).padStart(2, '0')}`;
-    form.setValue('invoice_month', newMonth);
-  };
-
-  const calculateInstallmentAmount = (totalAmount: number, installments: number) => {
-    if (installments <= 0) return 0;
-    const installmentValue = totalAmount / installments;
-    return Number(installmentValue.toFixed(2));
-  };
-
-  const onSubmit = async (data: DebtFormValues) => {
+  const onSubmit = async (data: CreateClientForm) => {
     try {
       if (data.useInstallments && data.installments > 1) {
-        const installmentAmount = calculateInstallmentAmount(data.amount, data.installments);
+        const installmentAmount = data.amount / data.installments;
         const baseMonth = parse(`${data.invoice_month}-01`, 'yyyy-MM-dd', new Date());
         
-        // Create an array of installment debts
         const installmentDebts = Array.from({ length: data.installments }, (_, index) => {
           const installmentMonth = addMonths(baseMonth, index);
           const originalAmountText = `(Origem - ${formatCurrency(data.amount)})`;
@@ -114,10 +143,10 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
             description: description,
             transaction_date: data.transaction_date,
             invoice_month: format(installmentMonth, 'yyyy-MM-01'),
+            products: isProductMode ? products : null,
           };
         });
 
-        // Insert all installments
         const { error } = await supabase
           .from('lblz_debts')
           .insert(installmentDebts);
@@ -129,7 +158,6 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
           description: `${data.installments}x de ${formatCurrency(installmentAmount)} para ${clientName}`,
         });
       } else {
-        // Insert single debt
         const { error } = await supabase
           .from('lblz_debts')
           .insert({
@@ -138,6 +166,7 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
             description: data.description,
             transaction_date: data.transaction_date,
             invoice_month: data.invoice_month ? `${data.invoice_month}-01` : null,
+            products: isProductMode ? products : null,
           });
 
         if (error) throw error;
@@ -148,64 +177,121 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
         });
       }
 
-      queryClient.invalidateQueries({ queryKey: ['clients'] });
+      setOpen(false);
       form.reset();
+      setProducts([{ description: "", value: 0 }]);
+      setIsProductMode(false);
     } catch (error) {
       console.error('Error creating debt:', error);
       toast({
+        variant: "destructive",
         title: "Erro ao criar débito",
         description: "Ocorreu um erro ao tentar criar o débito. Tente novamente.",
-        variant: "destructive",
       });
     }
   };
 
-  const watchAmount = form.watch('amount');
-  const watchInstallments = form.watch('installments');
-  const watchUseInstallments = form.watch('useInstallments');
-
-  const installmentAmount = calculateInstallmentAmount(watchAmount, watchInstallments);
-
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
         <Button variant="outline" size="sm" className="w-full md:w-auto">
-          <PlusCircle className="h-4 w-4 mr-1" />
+          <UserPlus className="h-4 w-4 mr-1" />
           Incluir Débito
         </Button>
       </DialogTrigger>
-      <DialogContent className="w-[95vw] max-w-lg md:w-full p-4 md:p-6">
+      <DialogContent className="max-h-[80vh] overflow-y-auto w-[95vw] max-w-lg p-4 md:p-6">
         <DialogHeader>
           <DialogTitle className="text-lg md:text-xl">Novo Débito para {clientName}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
             <div className="space-y-4">
-              <FormField
-                control={form.control}
-                name="amount"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-base">Valor</FormLabel>
-                    <FormControl>
-                      <Input
-                        placeholder="R$ 0,00"
-                        inputMode="numeric"
-                        className="text-lg md:text-base"
-                        onChange={(e) => {
-                          let rawValue = e.target.value.replace(/\D/g, "");
-                          if (!rawValue) rawValue = "0";
-                          const formatted = formatCurrency(rawValue);
-                          field.onChange(parseCurrencyToNumber(formatted));
-                          e.target.value = formatted;
-                        }}
-                        value={field.value ? formatCurrency((field.value * 100).toFixed(0)) : "R$ 0,00"}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+              <div className="flex items-center justify-between">
+                <FormLabel className="text-base">
+                  {isProductMode ? "Produtos" : "Valor"}
+                </FormLabel>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={toggleMode}
+                  className="ml-2"
+                >
+                  <ArrowLeftRight className="h-4 w-4 mr-2" />
+                  {isProductMode ? "Modo Valor" : "Modo Produtos"}
+                </Button>
+              </div>
+
+              {isProductMode ? (
+                <div className="space-y-4">
+                  {products.map((product, index) => (
+                    <div key={index} className="flex gap-2 items-start">
+                      <div className="flex-1">
+                        <Input
+                          placeholder={`Produto ${index + 1}`}
+                          value={product.description}
+                          onChange={(e) => updateProduct(index, 'description', e.target.value)}
+                          className="mb-2"
+                        />
+                        <Input
+                          placeholder="R$ 0,00"
+                          value={formatCurrency(product.value)}
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/\D/g, '');
+                            updateProduct(index, 'value', value ? parseInt(value) / 100 : 0);
+                          }}
+                        />
+                      </div>
+                      <div className="flex flex-col gap-2">
+                        {index === products.length - 1 && (
+                          <Button
+                            type="button"
+                            size="icon"
+                            onClick={addProduct}
+                          >
+                            <Plus className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {products.length > 1 && (
+                          <Button
+                            type="button"
+                            variant="destructive"
+                            size="icon"
+                            onClick={() => removeProduct(index)}
+                          >
+                            <Minus className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <FormField
+                  control={form.control}
+                  name="amount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Input
+                          placeholder="R$ 0,00"
+                          inputMode="numeric"
+                          className="text-lg md:text-base"
+                          onChange={(e) => {
+                            let rawValue = e.target.value.replace(/\D/g, "");
+                            if (!rawValue) rawValue = "0";
+                            const numberValue = parseInt(rawValue) / 100;
+                            field.onChange(numberValue);
+                            e.target.value = formatCurrency(numberValue);
+                          }}
+                          value={formatCurrency(field.value)}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
               <FormField
                 control={form.control}
@@ -216,7 +302,7 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
                       <FormLabel className="text-base">Parcelar</FormLabel>
                     </div>
                     <FormControl>
-                      <Switch
+                      <Checkbox
                         checked={field.value}
                         onCheckedChange={field.onChange}
                       />
@@ -225,7 +311,7 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
                 )}
               />
 
-              {watchUseInstallments && (
+              {form.watch('useInstallments') && (
                 <FormField
                   control={form.control}
                   name="installments"
@@ -241,9 +327,9 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
                           {...field}
                         />
                       </FormControl>
-                      {watchAmount > 0 && watchInstallments > 0 && (
+                      {form.watch('amount') > 0 && field.value > 0 && (
                         <p className="text-sm text-muted-foreground mt-2">
-                          {watchInstallments}x de {formatCurrency(installmentAmount)}
+                          {field.value}x de {formatCurrency(form.watch('amount') / field.value)}
                         </p>
                       )}
                       <FormMessage />
@@ -295,31 +381,13 @@ export function CreateDebtDialog({ clientId, clientName }: CreateDebtDialogProps
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-base">Mês/Ano da Fatura</FormLabel>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={() => navigateMonth('previous')}
-                    >
-                      <ChevronLeft className="h-4 w-4" />
-                    </Button>
-                    <FormControl>
-                      <Input 
-                        type="month" 
-                        className="text-center text-lg md:text-base"
-                        {...field} 
-                      />
-                    </FormControl>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="icon"
-                      onClick={() => navigateMonth('next')}
-                    >
-                      <ChevronRight className="h-4 w-4" />
-                    </Button>
-                  </div>
+                  <FormControl>
+                    <Input 
+                      type="month" 
+                      className="text-lg md:text-base"
+                      {...field} 
+                    />
+                  </FormControl>
                   <FormMessage />
                 </FormItem>
               )}

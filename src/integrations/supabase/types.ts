@@ -65,6 +65,7 @@ export type Database = {
           description: string | null
           id: string
           invoice_month: string | null
+          products: Json | null
           status: Database["public"]["Enums"]["debt_status"]
           transaction_date: string | null
           updated_at: string
@@ -76,6 +77,7 @@ export type Database = {
           description?: string | null
           id?: string
           invoice_month?: string | null
+          products?: Json | null
           status?: Database["public"]["Enums"]["debt_status"]
           transaction_date?: string | null
           updated_at?: string
@@ -87,6 +89,7 @@ export type Database = {
           description?: string | null
           id?: string
           invoice_month?: string | null
+          products?: Json | null
           status?: Database["public"]["Enums"]["debt_status"]
           transaction_date?: string | null
           updated_at?: string
