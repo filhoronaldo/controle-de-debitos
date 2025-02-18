@@ -1,6 +1,5 @@
-
 import { Button } from "@/components/ui/button";
-import { FileText, Trash2 } from "lucide-react";
+import { FileText, Trash2, Package2 } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -11,6 +10,11 @@ import { useEffect, useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 
 interface TransactionHistoryProps {
   isOpen: boolean;
@@ -85,7 +89,6 @@ export function TransactionHistory({
     }
 
     try {
-      // Primeiro exclui os pagamentos associados
       const { error: paymentsError } = await supabase
         .from("lblz_payments")
         .delete()
@@ -96,7 +99,6 @@ export function TransactionHistory({
         throw paymentsError;
       }
 
-      // Depois exclui os débitos
       const { error: debtsError } = await supabase
         .from("lblz_debts")
         .delete()
@@ -109,16 +111,13 @@ export function TransactionHistory({
 
       toast.success(`${selectedDebts.length} débito(s) excluído(s) com sucesso`);
       
-      // Limpa a seleção
       setSelectedDebts([]);
       
-      // Força a atualização dos dados
       queryClient.invalidateQueries({ queryKey: ["transactions"] });
       queryClient.invalidateQueries({ queryKey: ["clients"] });
       queryClient.invalidateQueries({ queryKey: ["total-debt"] });
       queryClient.invalidateQueries({ queryKey: ["today-payments"] });
       
-      // Fecha o modal se todos os débitos foram excluídos
       if (transactions?.length === selectedDebts.length) {
         onOpenChange(false);
       }
@@ -132,7 +131,6 @@ export function TransactionHistory({
     const printWindow = window.open("", "_blank");
     if (!printWindow) return;
 
-    // Verificar dados essenciais
     if (!clientDetails) {
       console.error("Detalhes do cliente não encontrados.");
       return;
@@ -143,7 +141,6 @@ export function TransactionHistory({
       return;
     }
 
-    // Extrair informação de parcelamento da descrição
     const getInstallmentInfo = (description: string | null): { current: number; total: number } => {
       if (!description) return { current: 1, total: 1 };
       const match = description.match(/\((\d+)\/(\d+)\)$/);
@@ -156,7 +153,6 @@ export function TransactionHistory({
 
     const installmentInfo = getInstallmentInfo(transaction.description);
 
-    // Formatar o valor por extenso
     const formatMoneyInWords = (value: number) => {
       const formatter = new Intl.NumberFormat("pt-BR", {
         style: "currency",
@@ -189,7 +185,6 @@ export function TransactionHistory({
       return `${reaisText} reais e ${centavosText} centavos`;
     };
 
-    // Formatar a data por extenso
     const formatDateInWords = (date: string) => {
       const d = parseISO(date);
       const month = format(d, "MMMM", { locale: ptBR });
@@ -214,7 +209,6 @@ export function TransactionHistory({
       return `${dayInWords} de ${month} de ${year}`;
     };
 
-    // Gerar o HTML
     const html = `
 <!DOCTYPE html>
 <html lang="pt-BR">
@@ -264,9 +258,15 @@ export function TransactionHistory({
 </html>
 `;
 
-    // Escrever o HTML na nova janela
     printWindow.document.write(html);
     printWindow.document.close();
+  };
+
+  const formatCurrency = (value: number) => {
+    return new Intl.NumberFormat('pt-BR', {
+      style: 'currency',
+      currency: 'BRL'
+    }).format(value);
   };
 
   return (
@@ -347,6 +347,30 @@ export function TransactionHistory({
                   </div>
                 </div>
                 <div className="flex items-start gap-2">
+                  {transaction.products && (
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          title="Ver Produtos"
+                        >
+                          <Package2 className="h-4 w-4" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="w-80">
+                        <div className="space-y-2">
+                          <h4 className="font-medium">Produtos do Débito</h4>
+                          {Array.isArray(transaction.products) && transaction.products.map((product: any, index) => (
+                            <div key={index} className="flex justify-between items-center py-1 border-b last:border-b-0">
+                              <span className="text-sm">{product.description}</span>
+                              <span className="text-sm font-medium">{formatCurrency(product.value)}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
+                  )}
                   <Button
                     size="sm"
                     variant="outline"
