@@ -35,12 +35,9 @@ const productSchema = z.object({
 
 const formSchema = z.object({
   amount: z.coerce.number().min(0.01, "O valor deve ser maior que zero"),
-  phone: z.string().min(1, "Telefone é obrigatório"),
-  is_whatsapp: z.boolean().default(true),
-  document: z.string().optional(),
   description: z.string().optional(),
-  transaction_date: z.string().optional(),
-  invoice_month: z.string().optional(),
+  transaction_date: z.string().min(1, "Data da transação é obrigatória"),
+  invoice_month: z.string().min(1, "Mês/Ano da fatura é obrigatório"),
   installments: z.coerce.number().min(1).max(48),
   useInstallments: z.boolean(),
   products: z.array(productSchema).optional(),
@@ -65,7 +62,7 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
       useInstallments: false,
       amount: 0,
       description: "",
-      transaction_date: new Date().toLocaleDateString('en-CA'),
+      transaction_date: new Date().toISOString().split('T')[0],
       invoice_month: new Date().toISOString().split('T')[0].substring(0, 7),
       installments: 1,
       products: [],
@@ -126,6 +123,21 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
 
   const onSubmit = async (data: CreateClientForm) => {
     try {
+      // Validar valor total quando estiver no modo produtos
+      if (isProductMode) {
+        const totalAmount = products.reduce((sum, product) => sum + (product.value || 0), 0);
+        if (totalAmount <= 0) {
+          toast({
+            variant: "destructive",
+            title: "Erro ao criar débito",
+            description: "O valor total dos produtos deve ser maior que zero.",
+          });
+          return;
+        }
+        // Atualizar o valor total no formulário
+        data.amount = totalAmount;
+      }
+
       if (data.useInstallments && data.installments > 1) {
         const installmentAmount = data.amount / data.installments;
         const baseMonth = parse(`${data.invoice_month}-01`, 'yyyy-MM-dd', new Date());
@@ -137,7 +149,6 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
             ? `${data.description} ${originalAmountText} (${index + 1}/${data.installments})`
             : `Parcela ${originalAmountText} (${index + 1}/${data.installments})`;
             
-          // Garantir que os produtos tenham a estrutura correta
           const formattedProducts = isProductMode ? products.map((product, idx) => ({
             description: product.description || `Produto ${idx + 1}`,
             value: product.value
@@ -149,7 +160,8 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
             description: description,
             transaction_date: data.transaction_date,
             invoice_month: format(installmentMonth, 'yyyy-MM-01'),
-            products: formattedProducts as Json
+            products: formattedProducts as Json,
+            status: 'aberta'
           };
         });
 
@@ -157,14 +169,16 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
           .from('lblz_debts')
           .insert(installmentDebts);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Supabase error:', error);
+          throw error;
+        }
 
         toast({
           title: "Débito parcelado criado com sucesso!",
           description: `${data.installments}x de ${formatCurrency(installmentAmount)} para ${clientName}`,
         });
       } else {
-        // Garantir que os produtos tenham a estrutura correta
         const formattedProducts = isProductMode ? products.map((product, idx) => ({
           description: product.description || `Produto ${idx + 1}`,
           value: product.value
@@ -177,11 +191,15 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
             amount: data.amount,
             description: data.description,
             transaction_date: data.transaction_date,
-            invoice_month: data.invoice_month ? `${data.invoice_month}-01` : null,
-            products: formattedProducts as Json
+            invoice_month: `${data.invoice_month}-01`,
+            products: formattedProducts as Json,
+            status: 'aberta'
           });
 
-        if (error) throw error;
+        if (error) {
+          console.error('Supabase error:', error);
+          throw error;
+        }
 
         toast({
           title: "Débito criado com sucesso!",
