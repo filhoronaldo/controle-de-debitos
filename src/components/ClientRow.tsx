@@ -1,3 +1,4 @@
+
 import { Button } from "@/components/ui/button";
 import { CreditCard, History, User, Send, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -48,7 +49,7 @@ export function ClientRow({
         .from('lblz_debts')
         .select('*, lblz_payments(amount)')
         .eq('client_id', client.id)
-        .eq('status', 'aberta')
+        .or('status.eq.aberta,status.eq.parcial')
         .order('invoice_month', { ascending: true });
 
       if (debtsError) {
@@ -78,7 +79,7 @@ export function ClientRow({
         return acc;
       }, {} as Record<string, { total: number; debts: typeof debts }>) || {};
 
-      // Encontrar o primeiro mês com fatura em aberto e atrasada
+      // Encontrar o primeiro mês com fatura em aberto ou parcialmente paga e atrasada
       const today = new Date();
       const overdueMonth = Object.entries(monthlyDebts).find(([month]) => {
         const dueDate = setDate(parseISO(month), invoiceDay);
@@ -87,13 +88,14 @@ export function ClientRow({
 
       let message = "";
       
-      if (overdueMonth) {
-        const [month, data] = overdueMonth;
+      if (overdueMonth || client.status === 'atrasado' || client.status === 'atrasado_parcial') {
+        const [month, data] = overdueMonth || Object.entries(monthlyDebts)[0];
         const dueDate = format(setDate(parseISO(month), invoiceDay), "dd/MM/yyyy");
         
         message = `Oi, ${client.name}! Tudo certo?\n\n` +
           `Só passando aqui pra te lembrar que o pagamento da sua fatura de R$ ${data.total.toFixed(2)}, ` +
-          `que venceu dia *${dueDate}*, ainda não foi feito.\n\n` +
+          `que venceu dia *${dueDate}*, ainda não foi ${client.status === 'atrasado_parcial' ? 'totalmente quitado' : 'feito'}.\n\n` +
+          `${client.status === 'atrasado_parcial' ? 'Vimos que você já fez um pagamento parcial, mas ainda há um valor pendente. ' : ''}` +
           `Se já pagou, só me avisa pra darmos baixa! Se ainda não conseguiu, me chama pra combinarmos o melhor jeito de acertar.\n\n` +
           `💰 *Opções de Pagamento*:\n` +
           `- Fatura em aberto: R$ ${data.total.toFixed(2)}\n` +
