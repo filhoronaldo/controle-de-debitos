@@ -27,6 +27,7 @@ import { z } from "zod";
 import { addMonths, format, parse } from "date-fns";
 import { Textarea } from "@/components/ui/textarea";
 import { Json } from "@/integrations/supabase/types";
+import type { Transaction } from "@/types/transaction";
 
 const productSchema = z.object({
   description: z.string().optional(),
@@ -142,7 +143,7 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
         const installmentAmount = data.amount / data.installments;
         const baseMonth = parse(`${data.invoice_month}-01`, 'yyyy-MM-dd', new Date());
         
-        const installmentDebts = Array.from({ length: data.installments }, (_, index) => {
+        const installmentDebts: Omit<Transaction, 'id' | 'created_at'>[] = Array.from({ length: data.installments }, (_, index) => {
           const installmentMonth = addMonths(baseMonth, index);
           const originalAmountText = `(Origem - ${formatCurrency(data.amount)})`;
           const description = data.description 
@@ -161,7 +162,7 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
             transaction_date: data.transaction_date,
             invoice_month: format(installmentMonth, 'yyyy-MM-01'),
             products: formattedProducts as Json,
-            status: 'aberta'
+            status: 'aberta' as const
           };
         });
 
@@ -184,17 +185,19 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
           value: product.value
         })) : null;
 
+        const newDebt: Omit<Transaction, 'id' | 'created_at'> = {
+          client_id: clientId,
+          amount: data.amount,
+          description: data.description,
+          transaction_date: data.transaction_date,
+          invoice_month: `${data.invoice_month}-01`,
+          products: formattedProducts as Json,
+          status: 'aberta' as const
+        };
+
         const { error } = await supabase
           .from('lblz_debts')
-          .insert({
-            client_id: clientId,
-            amount: data.amount,
-            description: data.description,
-            transaction_date: data.transaction_date,
-            invoice_month: `${data.invoice_month}-01`,
-            products: formattedProducts as Json,
-            status: 'aberta'
-          });
+          .insert(newDebt);
 
         if (error) {
           console.error('Supabase error:', error);
