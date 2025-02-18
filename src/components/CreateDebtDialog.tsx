@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -73,11 +72,9 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
   const toggleMode = () => {
     setIsProductMode(!isProductMode);
     if (!isProductMode) {
-      // Entrando no modo produto
       form.setValue('amount', 0);
       calculateTotalFromProducts();
     } else {
-      // Saindo do modo produto
       setProducts([{ description: "", value: 0 }]);
     }
   };
@@ -98,7 +95,6 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
   const updateProduct = (index: number, field: keyof Product, value: string | number) => {
     const newProducts = [...products];
     if (field === 'value') {
-      // Converter string de moeda para número
       const numericValue = typeof value === 'string' 
         ? Number(value.replace(/[^\d,]/g, '').replace(',', '.')) / 100
         : value;
@@ -124,7 +120,6 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
 
   const onSubmit = async (data: CreateClientForm) => {
     try {
-      // Validar valor total quando estiver no modo produtos
       if (isProductMode) {
         const totalAmount = products.reduce((sum, product) => sum + (product.value || 0), 0);
         if (totalAmount <= 0) {
@@ -135,7 +130,6 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
           });
           return;
         }
-        // Atualizar o valor total no formulário
         data.amount = totalAmount;
       }
 
@@ -143,7 +137,7 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
         const installmentAmount = data.amount / data.installments;
         const baseMonth = parse(`${data.invoice_month}-01`, 'yyyy-MM-dd', new Date());
         
-        const installmentDebts: Omit<Transaction, 'id' | 'created_at'>[] = Array.from({ length: data.installments }, (_, index) => {
+        const installmentDebts = Array.from({ length: data.installments }, (_, index) => {
           const installmentMonth = addMonths(baseMonth, index);
           const originalAmountText = `(Origem - ${formatCurrency(data.amount)})`;
           const description = data.description 
@@ -158,10 +152,10 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
           return {
             client_id: clientId,
             amount: installmentAmount,
-            description: description,
+            description,
             transaction_date: data.transaction_date,
             invoice_month: format(installmentMonth, 'yyyy-MM-01'),
-            products: formattedProducts as Json,
+            products: formattedProducts,
             status: 'aberta' as const
           };
         });
@@ -185,19 +179,17 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
           value: product.value
         })) : null;
 
-        const newDebt: Omit<Transaction, 'id' | 'created_at'> = {
-          client_id: clientId,
-          amount: data.amount,
-          description: data.description,
-          transaction_date: data.transaction_date,
-          invoice_month: `${data.invoice_month}-01`,
-          products: formattedProducts as Json,
-          status: 'aberta' as const
-        };
-
         const { error } = await supabase
           .from('lblz_debts')
-          .insert(newDebt);
+          .insert({
+            client_id: clientId,
+            amount: data.amount,
+            description: data.description,
+            transaction_date: data.transaction_date,
+            invoice_month: `${data.invoice_month}-01`,
+            products: formattedProducts,
+            status: 'aberta' as const
+          });
 
         if (error) {
           console.error('Supabase error:', error);
