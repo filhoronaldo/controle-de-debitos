@@ -26,6 +26,7 @@ import { z } from "zod";
 import ReactInputMask from "react-input-mask";
 import { Textarea } from "@/components/ui/textarea";
 import type { Json } from "@/integrations/supabase/types";
+import { parse, addMonths, format } from "date-fns";
 
 const formSchema = z.object({
   amount: z.coerce.number().min(0.01, "O valor deve ser maior que zero"),
@@ -151,7 +152,7 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
           const formattedProducts = isProductMode ? products.map((product, idx) => ({
             description: product.description || `Produto ${idx + 1}`,
             value: product.value
-          })) : null;
+          })) as Json : null;
 
           return {
             client_id: clientId,
@@ -168,10 +169,7 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
           .from('lblz_debts')
           .insert(installmentDebts);
 
-        if (error) {
-          console.error('Supabase error:', error);
-          throw error;
-        }
+        if (error) throw error;
 
         toast({
           title: "Débito parcelado criado com sucesso!",
