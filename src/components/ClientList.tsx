@@ -181,12 +181,29 @@ export function ClientList() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('lblz_debts')
-        .select('*')
+        .select(`
+          *,
+          lblz_payments (
+            id,
+            amount,
+            payment_date,
+            payment_method,
+            invoice_month,
+            debt_id
+          )
+        `)
         .eq('client_id', selectedClient)
         .order('transaction_date', { ascending: false });
 
       if (error) throw error;
-      return data as Transaction[];
+
+      // Mapeando os pagamentos para o formato esperado
+      const transactionsWithPayments = data.map((transaction: any) => ({
+        ...transaction,
+        payments: transaction.lblz_payments || []
+      }));
+
+      return transactionsWithPayments as Transaction[];
     }
   });
 
