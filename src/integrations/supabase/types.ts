@@ -142,6 +142,54 @@ export type Database = {
           },
         ]
       }
+      lblz_sales: {
+        Row: {
+          client_id: string
+          created_at: string
+          debt_id: string | null
+          id: string
+          payment_method: string | null
+          products: Json
+          sale_number: number | null
+          total_amount: number
+        }
+        Insert: {
+          client_id: string
+          created_at?: string
+          debt_id?: string | null
+          id?: string
+          payment_method?: string | null
+          products: Json
+          sale_number?: number | null
+          total_amount: number
+        }
+        Update: {
+          client_id?: string
+          created_at?: string
+          debt_id?: string | null
+          id?: string
+          payment_method?: string | null
+          products?: Json
+          sale_number?: number | null
+          total_amount?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lblz_sales_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "lblz_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lblz_sales_debt_id_fkey"
+            columns: ["debt_id"]
+            isOneToOne: false
+            referencedRelation: "lblz_debts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rrrr: {
         Row: {
           created_at: string

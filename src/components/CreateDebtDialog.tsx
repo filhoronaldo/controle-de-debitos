@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -23,10 +24,16 @@ import { useToast } from "@/components/ui/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { addMonths, format, parse } from "date-fns";
+import { parse, addMonths, format } from "date-fns";
 import { Textarea } from "@/components/ui/textarea";
 import { Json } from "@/integrations/supabase/types";
-import type { Transaction } from "@/types/transaction";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 const productSchema = z.object({
   description: z.string().optional(),
@@ -40,7 +47,7 @@ const formSchema = z.object({
   invoice_month: z.string().min(1, "Mês/Ano da fatura é obrigatório"),
   installments: z.coerce.number().min(1).max(48),
   useInstallments: z.boolean(),
-  products: z.array(productSchema).optional(),
+  paymentMethod: z.string().min(1, "Forma de pagamento é obrigatória"),
 });
 
 type CreateClientForm = z.infer<typeof formSchema>;
@@ -49,6 +56,14 @@ interface Product {
   description: string;
   value: number;
 }
+
+const PAYMENT_METHODS = [
+  { id: "credito_loja", label: "Crédito Próprio Loja" },
+  { id: "dinheiro", label: "Dinheiro" },
+  { id: "pix", label: "PIX" },
+  { id: "cartao_credito", label: "Cartão de Crédito" },
+  { id: "cartao_debito", label: "Cartão de Débito" },
+] as const;
 
 export function CreateDebtDialog({ clientId, clientName }: { clientId: string, clientName: string }) {
   const [open, setOpen] = useState(false);
@@ -65,7 +80,7 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
       transaction_date: new Date().toISOString().split('T')[0],
       invoice_month: new Date().toISOString().split('T')[0].substring(0, 7),
       installments: 1,
-      products: [],
+      paymentMethod: "credito_loja",
     },
   });
 
@@ -120,98 +135,91 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
 
   const onSubmit = async (data: CreateClientForm) => {
     try {
+      const isCredit = data.paymentMethod === "credito_loja";
+      
       if (isProductMode) {
         const totalAmount = products.reduce((sum, product) => sum + (product.value || 0), 0);
         if (totalAmount <= 0) {
           toast({
             variant: "destructive",
-            title: "Erro ao criar débito",
+            title: "Erro ao criar venda",
             description: "O valor total dos produtos deve ser maior que zero.",
           });
           return;
         }
-        data.amount = totalAmount;
-      }
 
-      if (data.useInstallments && data.installments > 1) {
-        const installmentAmount = data.amount / data.installments;
-        const baseMonth = parse(`${data.invoice_month}-01`, 'yyyy-MM-dd', new Date());
-        
-        const installmentDebts = Array.from({ length: data.installments }, (_, index) => {
-          const installmentMonth = addMonths(baseMonth, index);
-          const originalAmountText = `(Origem - ${formatCurrency(data.amount)})`;
-          const description = data.description 
-            ? `${data.description} ${originalAmountText} (${index + 1}/${data.installments})`
-            : `Parcela ${originalAmountText} (${index + 1}/${data.installments})`;
-            
-          const formattedProducts = isProductMode ? products.map((product, idx) => ({
-            description: product.description || `Produto ${idx + 1}`,
-            value: product.value
-          })) : null;
-
-          return {
-            client_id: clientId,
-            amount: installmentAmount,
-            description,
-            transaction_date: data.transaction_date,
-            invoice_month: format(installmentMonth, 'yyyy-MM-01'),
-            products: formattedProducts,
-            status: 'aberta' as const
-          };
-        });
-
-        const { error } = await supabase
-          .from('lblz_debts')
-          .insert(installmentDebts);
-
-        if (error) {
-          console.error('Supabase error:', error);
-          throw error;
-        }
-
-        toast({
-          title: "Débito parcelado criado com sucesso!",
-          description: `${data.installments}x de ${formatCurrency(installmentAmount)} para ${clientName}`,
-        });
-      } else {
-        const formattedProducts = isProductMode ? products.map((product, idx) => ({
+        const formattedProducts = products.map((product, idx) => ({
           description: product.description || `Produto ${idx + 1}`,
           value: product.value
-        })) : null;
+        }));
 
-        const { error } = await supabase
-          .from('lblz_debts')
-          .insert({
+        if (isCredit) {
+          // Criar débito primeiro
+          const debtData = {
             client_id: clientId,
-            amount: data.amount,
+            amount: totalAmount,
             description: data.description,
             transaction_date: data.transaction_date,
             invoice_month: `${data.invoice_month}-01`,
-            products: formattedProducts,
+            products: formattedProducts as Json,
             status: 'aberta' as const
-          });
+          };
 
-        if (error) {
-          console.error('Supabase error:', error);
-          throw error;
+          const { data: insertedDebt, error: debtError } = await supabase
+            .from('lblz_debts')
+            .insert(debtData)
+            .select()
+            .single();
+
+          if (debtError) throw debtError;
+
+          // Criar venda associada ao débito
+          const { error: saleError } = await supabase
+            .from('lblz_sales')
+            .insert({
+              client_id: clientId,
+              total_amount: totalAmount,
+              products: formattedProducts,
+              payment_method: PAYMENT_METHODS.find(m => m.id === data.paymentMethod)?.label,
+              debt_id: insertedDebt.id
+            });
+
+          if (saleError) throw saleError;
+
+          toast({
+            title: "Venda a crédito criada com sucesso!",
+            description: `Venda de ${formatCurrency(totalAmount)} registrada para ${clientName}`,
+          });
+        } else {
+          // Criar apenas a venda
+          const { error: saleError } = await supabase
+            .from('lblz_sales')
+            .insert({
+              client_id: clientId,
+              total_amount: totalAmount,
+              products: formattedProducts,
+              payment_method: PAYMENT_METHODS.find(m => m.id === data.paymentMethod)?.label
+            });
+
+          if (saleError) throw saleError;
+
+          toast({
+            title: "Venda criada com sucesso!",
+            description: `Venda de ${formatCurrency(totalAmount)} registrada para ${clientName}`,
+          });
         }
 
-        toast({
-          title: "Débito criado com sucesso!",
-          description: `Débito de ${formatCurrency(data.amount)} adicionado para ${clientName}`,
-        });
+        setOpen(false);
+        form.reset();
+        setProducts([{ description: "", value: 0 }]);
+        setIsProductMode(false);
       }
-
-      setOpen(false);
-      form.reset();
-      setProducts([{ description: "", value: 0 }]);
-      setIsProductMode(false);
     } catch (error) {
-      console.error('Error creating debt:', error);
+      console.error('Error creating sale:', error);
       toast({
         variant: "destructive",
-        title: "Erro ao criar débito",
-        description: "Ocorreu um erro ao tentar criar o débito. Tente novamente.",
+        title: "Erro ao criar venda",
+        description: "Ocorreu um erro ao tentar criar a venda. Tente novamente.",
       });
     }
   };
@@ -290,6 +298,9 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
                       </div>
                     </div>
                   ))}
+                  <div className="mt-4 text-right font-medium">
+                    Total: {formatCurrency(form.watch('amount'))}
+                  </div>
                 </div>
               ) : (
                 <FormField
@@ -300,16 +311,12 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
                       <FormControl>
                         <Input
                           placeholder="R$ 0,00"
-                          inputMode="numeric"
-                          className="text-lg md:text-base"
-                          onChange={(e) => {
-                            let rawValue = e.target.value.replace(/\D/g, "");
-                            if (!rawValue) rawValue = "0";
-                            const numberValue = parseInt(rawValue) / 100;
-                            field.onChange(numberValue);
-                            e.target.value = formatCurrency(numberValue);
-                          }}
                           value={formatCurrency(field.value)}
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/\D/g, '');
+                            field.onChange(value ? parseInt(value) / 100 : 0);
+                          }}
+                          className="text-lg md:text-base"
                         />
                       </FormControl>
                       <FormMessage />
@@ -318,49 +325,83 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
                 />
               )}
 
-              <FormField
-                control={form.control}
-                name="useInstallments"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-base">Parcelar</FormLabel>
-                    </div>
-                    <FormControl>
-                      <Checkbox
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
-                      />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-
-              {form.watch('useInstallments') && (
+              {isProductMode && (
                 <FormField
                   control={form.control}
-                  name="installments"
+                  name="paymentMethod"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-base">Número de Parcelas</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          min="1"
-                          max="48"
-                          className="text-lg md:text-base"
-                          {...field}
-                        />
-                      </FormControl>
-                      {form.watch('amount') > 0 && field.value > 0 && (
-                        <p className="text-sm text-muted-foreground mt-2">
-                          {field.value}x de {formatCurrency(form.watch('amount') / field.value)}
-                        </p>
-                      )}
+                      <FormLabel className="text-base">Forma de Pagamento</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
+                        <FormControl>
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione a forma de pagamento" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {PAYMENT_METHODS.map((method) => (
+                            <SelectItem key={method.id} value={method.id}>
+                              {method.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+              )}
+
+              {isProductMode && form.watch('paymentMethod') === 'credito_loja' && (
+                <>
+                  <FormField
+                    control={form.control}
+                    name="useInstallments"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-base">Parcelar</FormLabel>
+                        </div>
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  {form.watch('useInstallments') && (
+                    <FormField
+                      control={form.control}
+                      name="installments"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-base">Número de Parcelas</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min="1"
+                              max="48"
+                              className="text-lg md:text-base"
+                              {...field}
+                            />
+                          </FormControl>
+                          {form.watch('amount') > 0 && field.value > 0 && (
+                            <p className="text-sm text-muted-foreground mt-2">
+                              {field.value}x de {formatCurrency(form.watch('amount') / field.value)}
+                            </p>
+                          )}
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                </>
               )}
             </div>
 
@@ -382,44 +423,48 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
               )}
             />
 
-            <FormField
-              control={form.control}
-              name="transaction_date"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-base">Data da Transação</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="date" 
-                      className="text-lg md:text-base"
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+            {(form.watch('paymentMethod') === 'credito_loja' || !isProductMode) && (
+              <>
+                <FormField
+                  control={form.control}
+                  name="transaction_date"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-base">Data da Transação</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="date" 
+                          className="text-lg md:text-base"
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            <FormField
-              control={form.control}
-              name="invoice_month"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel className="text-base">Mês/Ano da Fatura</FormLabel>
-                  <FormControl>
-                    <Input 
-                      type="month" 
-                      className="text-lg md:text-base"
-                      {...field} 
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+                <FormField
+                  control={form.control}
+                  name="invoice_month"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-base">Mês/Ano da Fatura</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="month" 
+                          className="text-lg md:text-base"
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </>
+            )}
 
             <Button type="submit" className="w-full text-base py-6 md:py-4">
-              Criar Débito
+              {isProductMode ? "Criar Venda" : "Criar Débito"}
             </Button>
           </form>
         </Form>
