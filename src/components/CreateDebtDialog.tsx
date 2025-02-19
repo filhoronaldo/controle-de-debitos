@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -65,14 +64,14 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
   });
 
   const toggleMode = () => {
-    setIsProductMode(!isProductMode);
     if (!isProductMode) {
-      form.setValue('amount', 0);
-      calculateTotalFromProducts();
+      const currentAmount = form.getValues('amount');
+      setProducts([{ description: "", value: currentAmount }]);
+      setTotalAmount(currentAmount);
     } else {
-      setProducts([{ description: "", value: 0 }]);
-      setTotalAmount(0);
+      form.setValue('amount', totalAmount);
     }
+    setIsProductMode(!isProductMode);
   };
 
   const addProduct = () => {
@@ -118,6 +117,15 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
   const onSubmit = async (data: CreateClientForm) => {
     try {
       if (isProductMode) {
+        if (products.some(p => p.value <= 0)) {
+          toast({
+            variant: "destructive",
+            title: "Erro na validação",
+            description: "Todos os produtos devem ter um valor maior que zero.",
+          });
+          return;
+        }
+
         const formattedProducts = products.map((product, idx) => ({
           description: product.description || `Produto ${idx + 1}`,
           value: product.value
