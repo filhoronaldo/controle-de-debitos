@@ -1,3 +1,4 @@
+
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -247,7 +248,7 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
                 </Button>
               </div>
 
-              {isProductMode && (
+              {isProductMode ? (
                 <div className="space-y-4">
                   {products.map((product, index) => (
                     <div key={index} className="flex gap-2 items-start">
@@ -294,6 +295,27 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
                     Total: {formatCurrency(totalAmount)}
                   </div>
                 </div>
+              ) : (
+                <FormField
+                  control={form.control}
+                  name="amount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Input
+                          placeholder="R$ 0,00"
+                          value={formatCurrency(field.value)}
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/\D/g, '');
+                            field.onChange(value ? parseInt(value) / 100 : 0);
+                          }}
+                          className="text-lg md:text-base"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
               )}
 
               <FormField
