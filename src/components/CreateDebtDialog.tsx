@@ -54,6 +54,7 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
   const [open, setOpen] = useState(false);
   const [isProductMode, setIsProductMode] = useState(false);
   const [products, setProducts] = useState<Product[]>([{ description: "", value: 0 }]);
+  const [totalAmount, setTotalAmount] = useState(0);
   const { toast } = useToast();
 
   const form = useForm<CreateClientForm>({
@@ -76,6 +77,7 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
       calculateTotalFromProducts();
     } else {
       setProducts([{ description: "", value: 0 }]);
+      setTotalAmount(0);
     }
   };
 
@@ -108,6 +110,7 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
 
   const calculateTotalFromProducts = (currentProducts = products) => {
     const total = currentProducts.reduce((sum, product) => sum + (product.value || 0), 0);
+    setTotalAmount(total);
     form.setValue('amount', total);
   };
 
@@ -121,15 +124,22 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
   const onSubmit = async (data: CreateClientForm) => {
     try {
       if (isProductMode) {
-        const totalAmount = products.reduce((sum, product) => sum + (product.value || 0), 0);
-        if (totalAmount <= 0) {
-          toast({
-            variant: "destructive",
-            title: "Erro ao criar débito",
-            description: "O valor total dos produtos deve ser maior que zero.",
-          });
-          return;
-        }
+        const { data: saleData, error: saleError } = await supabase
+          .from('lblz_sales')
+          .insert({
+            client_id: clientId,
+            total_amount: totalAmount,
+            products: products.map((product, idx) => ({
+              description: product.description || `Produto ${idx + 1}`,
+              value: product.value
+            }))
+          })
+          .select('sale_number')
+          .single();
+
+        if (saleError) throw saleError;
+
+        data.description = `Venda #${saleData.sale_number}${data.description ? ` - ${data.description}` : ''}`;
         data.amount = totalAmount;
       }
 
@@ -206,6 +216,7 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
       form.reset();
       setProducts([{ description: "", value: 0 }]);
       setIsProductMode(false);
+      setTotalAmount(0);
     } catch (error) {
       console.error('Error creating debt:', error);
       toast({
@@ -243,11 +254,11 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
                   className="ml-2"
                 >
                   <ArrowLeftRight className="h-4 w-4 mr-2" />
-                  {isProductMode ? "Modo Valor" : "Modo Produtos"}
+                  {isProductMode ? "Modo Valor" : "Modo Vendas"}
                 </Button>
               </div>
 
-              {isProductMode ? (
+              {isProductMode && (
                 <div className="space-y-4">
                   {products.map((product, index) => (
                     <div key={index} className="flex gap-2 items-start">
@@ -290,32 +301,10 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
                       </div>
                     </div>
                   ))}
+                  <div className="mt-4 text-right font-medium">
+                    Total: {formatCurrency(totalAmount)}
+                  </div>
                 </div>
-              ) : (
-                <FormField
-                  control={form.control}
-                  name="amount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <Input
-                          placeholder="R$ 0,00"
-                          inputMode="numeric"
-                          className="text-lg md:text-base"
-                          onChange={(e) => {
-                            let rawValue = e.target.value.replace(/\D/g, "");
-                            if (!rawValue) rawValue = "0";
-                            const numberValue = parseInt(rawValue) / 100;
-                            field.onChange(numberValue);
-                            e.target.value = formatCurrency(numberValue);
-                          }}
-                          value={formatCurrency(field.value)}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
               )}
 
               <FormField
