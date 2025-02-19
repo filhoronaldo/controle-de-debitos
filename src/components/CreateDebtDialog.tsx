@@ -23,10 +23,15 @@ import { useToast } from "@/components/ui/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import ReactInputMask from "react-input-mask";
+import { addMonths, format, parse } from "date-fns";
 import { Textarea } from "@/components/ui/textarea";
-import type { Json } from "@/integrations/supabase/types";
-import { parse, addMonths, format } from "date-fns";
+import { Json } from "@/integrations/supabase/types";
+import type { Transaction } from "@/types/transaction";
+
+const productSchema = z.object({
+  description: z.string().optional(),
+  value: z.coerce.number().min(0.01, "O valor deve ser maior que zero"),
+});
 
 const formSchema = z.object({
   amount: z.coerce.number().min(0.01, "O valor deve ser maior que zero"),
@@ -35,6 +40,7 @@ const formSchema = z.object({
   invoice_month: z.string().min(1, "Mês/Ano da fatura é obrigatório"),
   installments: z.coerce.number().min(1).max(48),
   useInstallments: z.boolean(),
+  products: z.array(productSchema).optional(),
 });
 
 type CreateClientForm = z.infer<typeof formSchema>;
@@ -48,7 +54,6 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
   const [open, setOpen] = useState(false);
   const [isProductMode, setIsProductMode] = useState(false);
   const [products, setProducts] = useState<Product[]>([{ description: "", value: 0 }]);
-  const [totalAmount, setTotalAmount] = useState(0);
   const { toast } = useToast();
 
   const form = useForm<CreateClientForm>({
@@ -60,18 +65,18 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
       transaction_date: new Date().toISOString().split('T')[0],
       invoice_month: new Date().toISOString().split('T')[0].substring(0, 7),
       installments: 1,
+      products: [],
     },
   });
 
   const toggleMode = () => {
-    if (!isProductMode) {
-      const currentAmount = form.getValues('amount');
-      setProducts([{ description: "", value: currentAmount }]);
-      setTotalAmount(currentAmount);
-    } else {
-      form.setValue('amount', totalAmount);
-    }
     setIsProductMode(!isProductMode);
+    if (!isProductMode) {
+      form.setValue('amount', 0);
+      calculateTotalFromProducts();
+    } else {
+      setProducts([{ description: "", value: 0 }]);
+    }
   };
 
   const addProduct = () => {
@@ -103,7 +108,6 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
 
   const calculateTotalFromProducts = (currentProducts = products) => {
     const total = currentProducts.reduce((sum, product) => sum + (product.value || 0), 0);
-    setTotalAmount(total);
     form.setValue('amount', total);
   };
 
@@ -117,33 +121,15 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
   const onSubmit = async (data: CreateClientForm) => {
     try {
       if (isProductMode) {
-        if (products.some(p => p.value <= 0)) {
+        const totalAmount = products.reduce((sum, product) => sum + (product.value || 0), 0);
+        if (totalAmount <= 0) {
           toast({
             variant: "destructive",
-            title: "Erro na validação",
-            description: "Todos os produtos devem ter um valor maior que zero.",
+            title: "Erro ao criar débito",
+            description: "O valor total dos produtos deve ser maior que zero.",
           });
           return;
         }
-
-        const formattedProducts = products.map((product, idx) => ({
-          description: product.description || `Produto ${idx + 1}`,
-          value: product.value
-        })) as Json;
-
-        const { data: saleData, error: saleError } = await supabase
-          .from('lblz_sales')
-          .insert({
-            client_id: clientId,
-            total_amount: totalAmount,
-            products: formattedProducts
-          })
-          .select('sale_number')
-          .single();
-
-        if (saleError) throw saleError;
-
-        data.description = `Venda #${saleData.sale_number}${data.description ? ` - ${data.description}` : ''}`;
         data.amount = totalAmount;
       }
 
@@ -161,7 +147,7 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
           const formattedProducts = isProductMode ? products.map((product, idx) => ({
             description: product.description || `Produto ${idx + 1}`,
             value: product.value
-          })) as Json : null;
+          })) : null;
 
           return {
             client_id: clientId,
@@ -178,7 +164,10 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
           .from('lblz_debts')
           .insert(installmentDebts);
 
-        if (error) throw error;
+        if (error) {
+          console.error('Supabase error:', error);
+          throw error;
+        }
 
         toast({
           title: "Débito parcelado criado com sucesso!",
@@ -188,9 +177,9 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
         const formattedProducts = isProductMode ? products.map((product, idx) => ({
           description: product.description || `Produto ${idx + 1}`,
           value: product.value
-        })) as Json : null;
+        })) : null;
 
-        const { error: debtError } = await supabase
+        const { error } = await supabase
           .from('lblz_debts')
           .insert({
             client_id: clientId,
@@ -199,10 +188,13 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
             transaction_date: data.transaction_date,
             invoice_month: `${data.invoice_month}-01`,
             products: formattedProducts,
-            status: 'aberta'
+            status: 'aberta' as const
           });
 
-        if (debtError) throw debtError;
+        if (error) {
+          console.error('Supabase error:', error);
+          throw error;
+        }
 
         toast({
           title: "Débito criado com sucesso!",
@@ -214,7 +206,6 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
       form.reset();
       setProducts([{ description: "", value: 0 }]);
       setIsProductMode(false);
-      setTotalAmount(0);
     } catch (error) {
       console.error('Error creating debt:', error);
       toast({
@@ -252,7 +243,7 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
                   className="ml-2"
                 >
                   <ArrowLeftRight className="h-4 w-4 mr-2" />
-                  {isProductMode ? "Modo Valor" : "Modo Vendas"}
+                  {isProductMode ? "Modo Valor" : "Modo Produtos"}
                 </Button>
               </div>
 
@@ -299,9 +290,6 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
                       </div>
                     </div>
                   ))}
-                  <div className="mt-4 text-right font-medium">
-                    Total: {formatCurrency(totalAmount)}
-                  </div>
                 </div>
               ) : (
                 <FormField
@@ -312,12 +300,16 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
                       <FormControl>
                         <Input
                           placeholder="R$ 0,00"
-                          value={formatCurrency(field.value)}
-                          onChange={(e) => {
-                            const value = e.target.value.replace(/\D/g, '');
-                            field.onChange(value ? parseInt(value) / 100 : 0);
-                          }}
+                          inputMode="numeric"
                           className="text-lg md:text-base"
+                          onChange={(e) => {
+                            let rawValue = e.target.value.replace(/\D/g, "");
+                            if (!rawValue) rawValue = "0";
+                            const numberValue = parseInt(rawValue) / 100;
+                            field.onChange(numberValue);
+                            e.target.value = formatCurrency(numberValue);
+                          }}
+                          value={formatCurrency(field.value)}
                         />
                       </FormControl>
                       <FormMessage />
