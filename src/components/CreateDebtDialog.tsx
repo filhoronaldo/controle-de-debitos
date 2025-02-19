@@ -23,15 +23,9 @@ import { useToast } from "@/components/ui/use-toast";
 import { Checkbox } from "@/components/ui/checkbox";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { addMonths, format, parse } from "date-fns";
+import ReactInputMask from "react-input-mask";
 import { Textarea } from "@/components/ui/textarea";
-import { Json } from "@/integrations/supabase/types";
-import type { Transaction } from "@/types/transaction";
-
-const productSchema = z.object({
-  description: z.string().optional(),
-  value: z.coerce.number().min(0.01, "O valor deve ser maior que zero"),
-});
+import type { Json } from "@/integrations/supabase/types";
 
 const formSchema = z.object({
   amount: z.coerce.number().min(0.01, "O valor deve ser maior que zero"),
@@ -40,7 +34,6 @@ const formSchema = z.object({
   invoice_month: z.string().min(1, "Mês/Ano da fatura é obrigatório"),
   installments: z.coerce.number().min(1).max(48),
   useInstallments: z.boolean(),
-  products: z.array(productSchema).optional(),
 });
 
 type CreateClientForm = z.infer<typeof formSchema>;
@@ -66,7 +59,6 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
       transaction_date: new Date().toISOString().split('T')[0],
       invoice_month: new Date().toISOString().split('T')[0].substring(0, 7),
       installments: 1,
-      products: [],
     },
   });
 
@@ -124,15 +116,17 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
   const onSubmit = async (data: CreateClientForm) => {
     try {
       if (isProductMode) {
+        const formattedProducts = products.map((product, idx) => ({
+          description: product.description || `Produto ${idx + 1}`,
+          value: product.value
+        })) as Json;
+
         const { data: saleData, error: saleError } = await supabase
           .from('lblz_sales')
           .insert({
             client_id: clientId,
             total_amount: totalAmount,
-            products: products.map((product, idx) => ({
-              description: product.description || `Produto ${idx + 1}`,
-              value: product.value
-            }))
+            products: formattedProducts
           })
           .select('sale_number')
           .single();
@@ -187,9 +181,9 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
         const formattedProducts = isProductMode ? products.map((product, idx) => ({
           description: product.description || `Produto ${idx + 1}`,
           value: product.value
-        })) : null;
+        })) as Json : null;
 
-        const { error } = await supabase
+        const { error: debtError } = await supabase
           .from('lblz_debts')
           .insert({
             client_id: clientId,
@@ -198,13 +192,10 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
             transaction_date: data.transaction_date,
             invoice_month: `${data.invoice_month}-01`,
             products: formattedProducts,
-            status: 'aberta' as const
+            status: 'aberta'
           });
 
-        if (error) {
-          console.error('Supabase error:', error);
-          throw error;
-        }
+        if (debtError) throw debtError;
 
         toast({
           title: "Débito criado com sucesso!",
