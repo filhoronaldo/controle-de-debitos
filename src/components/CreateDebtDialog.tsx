@@ -1,4 +1,3 @@
-
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Button } from "@/components/ui/button";
@@ -135,8 +134,6 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
 
   const onSubmit = async (data: CreateClientForm) => {
     try {
-      const isCredit = data.paymentMethod === "credito_loja";
-      
       if (isProductMode) {
         const totalAmount = products.reduce((sum, product) => sum + (product.value || 0), 0);
         if (totalAmount <= 0) {
@@ -153,8 +150,52 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
           value: product.value
         }));
 
-        if (isCredit) {
-          // Criar débito primeiro
+        if (data.useInstallments && data.installments > 1) {
+          const installmentAmount = totalAmount / data.installments;
+          const baseMonth = parse(`${data.invoice_month}-01`, 'yyyy-MM-dd', new Date());
+          
+          const installmentDebts = Array.from({ length: data.installments }, (_, index) => {
+            const installmentMonth = addMonths(baseMonth, index);
+            const originalAmountText = `(Origem - ${formatCurrency(totalAmount)})`;
+            const description = data.description 
+              ? `${data.description} ${originalAmountText} (${index + 1}/${data.installments})`
+              : `Parcela ${originalAmountText} (${index + 1}/${data.installments})`;
+              
+            return {
+              client_id: clientId,
+              amount: installmentAmount,
+              description,
+              transaction_date: data.transaction_date,
+              invoice_month: format(installmentMonth, 'yyyy-MM-01'),
+              products: formattedProducts as Json,
+              status: 'aberta' as const
+            };
+          });
+
+          const { error: debtError } = await supabase
+            .from('lblz_debts')
+            .insert(installmentDebts);
+
+          if (debtError) throw debtError;
+
+          // Criar venda associada aos débitos
+          const { error: saleError } = await supabase
+            .from('lblz_sales')
+            .insert({
+              client_id: clientId,
+              total_amount: totalAmount,
+              products: formattedProducts,
+              payment_method: PAYMENT_METHODS.find(m => m.id === data.paymentMethod)?.label
+            });
+
+          if (saleError) throw saleError;
+
+          toast({
+            title: "Venda parcelada criada com sucesso!",
+            description: `${data.installments}x de ${formatCurrency(installmentAmount)} para ${clientName}`,
+          });
+        } else {
+          // Criar débito único
           const debtData = {
             client_id: clientId,
             amount: totalAmount,
@@ -187,39 +228,74 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
           if (saleError) throw saleError;
 
           toast({
-            title: "Venda a crédito criada com sucesso!",
-            description: `Venda de ${formatCurrency(totalAmount)} registrada para ${clientName}`,
-          });
-        } else {
-          // Criar apenas a venda
-          const { error: saleError } = await supabase
-            .from('lblz_sales')
-            .insert({
-              client_id: clientId,
-              total_amount: totalAmount,
-              products: formattedProducts,
-              payment_method: PAYMENT_METHODS.find(m => m.id === data.paymentMethod)?.label
-            });
-
-          if (saleError) throw saleError;
-
-          toast({
             title: "Venda criada com sucesso!",
             description: `Venda de ${formatCurrency(totalAmount)} registrada para ${clientName}`,
           });
         }
+      } else {
+        // Modo Valor
+        if (data.useInstallments && data.installments > 1) {
+          const installmentAmount = data.amount / data.installments;
+          const baseMonth = parse(`${data.invoice_month}-01`, 'yyyy-MM-dd', new Date());
+          
+          const installmentDebts = Array.from({ length: data.installments }, (_, index) => {
+            const installmentMonth = addMonths(baseMonth, index);
+            const originalAmountText = `(Origem - ${formatCurrency(data.amount)})`;
+            const description = data.description 
+              ? `${data.description} ${originalAmountText} (${index + 1}/${data.installments})`
+              : `Parcela ${originalAmountText} (${index + 1}/${data.installments})`;
+              
+            return {
+              client_id: clientId,
+              amount: installmentAmount,
+              description,
+              transaction_date: data.transaction_date,
+              invoice_month: format(installmentMonth, 'yyyy-MM-01'),
+              status: 'aberta' as const
+            };
+          });
 
-        setOpen(false);
-        form.reset();
-        setProducts([{ description: "", value: 0 }]);
-        setIsProductMode(false);
+          const { error } = await supabase
+            .from('lblz_debts')
+            .insert(installmentDebts);
+
+          if (error) throw error;
+
+          toast({
+            title: "Débito parcelado criado com sucesso!",
+            description: `${data.installments}x de ${formatCurrency(installmentAmount)} para ${clientName}`,
+          });
+        } else {
+          const { error } = await supabase
+            .from('lblz_debts')
+            .insert({
+              client_id: clientId,
+              amount: data.amount,
+              description: data.description,
+              transaction_date: data.transaction_date,
+              invoice_month: `${data.invoice_month}-01`,
+              status: 'aberta'
+            });
+
+          if (error) throw error;
+
+          toast({
+            title: "Débito criado com sucesso!",
+            description: `Débito de ${formatCurrency(data.amount)} adicionado para ${clientName}`,
+          });
+        }
       }
+
+      setOpen(false);
+      form.reset();
+      setProducts([{ description: "", value: 0 }]);
+      setIsProductMode(false);
     } catch (error) {
-      console.error('Error creating sale:', error);
+      console.error('Error creating debt:', error);
       toast({
         variant: "destructive",
-        title: "Erro ao criar venda",
-        description: "Ocorreu um erro ao tentar criar a venda. Tente novamente.",
+        title: "Erro ao criar débito",
+        description: "Ocorreu um erro ao tentar criar o débito. Tente novamente.",
       });
     }
   };
@@ -303,26 +379,73 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
                   </div>
                 </div>
               ) : (
-                <FormField
-                  control={form.control}
-                  name="amount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <Input
-                          placeholder="R$ 0,00"
-                          value={formatCurrency(field.value)}
-                          onChange={(e) => {
-                            const value = e.target.value.replace(/\D/g, '');
-                            field.onChange(value ? parseInt(value) / 100 : 0);
-                          }}
-                          className="text-lg md:text-base"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
+                <>
+                  <FormField
+                    control={form.control}
+                    name="amount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Input
+                            placeholder="R$ 0,00"
+                            value={formatCurrency(field.value)}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/\D/g, '');
+                              field.onChange(value ? parseInt(value) / 100 : 0);
+                            }}
+                            className="text-lg md:text-base"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="useInstallments"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-base">Parcelar</FormLabel>
+                        </div>
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  {form.watch('useInstallments') && (
+                    <FormField
+                      control={form.control}
+                      name="installments"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-base">Número de Parcelas</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min="1"
+                              max="48"
+                              className="text-lg md:text-base"
+                              {...field}
+                            />
+                          </FormControl>
+                          {form.watch('amount') > 0 && field.value > 0 && (
+                            <p className="text-sm text-muted-foreground mt-2">
+                              {field.value}x de {formatCurrency(form.watch('amount') / field.value)}
+                            </p>
+                          )}
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   )}
-                />
+                </>
               )}
 
               {isProductMode && (
