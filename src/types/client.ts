@@ -2,6 +2,7 @@
 export interface Client {
   id: string;
   name: string;
+  phone: string;  // Adicionando a propriedade phone
   total_debt: number;
   status: 'em_dia' | 'atrasado' | 'atrasado_parcial' | 'pendente';
   next_due_date?: Date;
