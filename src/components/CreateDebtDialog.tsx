@@ -204,19 +204,43 @@ export function CreateDebtDialog({ clientId, clientName, clientPhone }: { client
 
           // Enviar mensagem WhatsApp após criar a venda
           try {
-            const firstPaymentDate = `${data.invoice_month}-01`;
-            await supabase.functions.invoke('send-whatsapp-message', {
-              body: {
-                phone: clientPhone,
-                customerName: clientName,
-                products: formattedProducts,
-                totalAmount,
-                paymentMethod: paymentMethodLabel,
-                installments: data.installments,
-                installmentAmount: totalAmount / data.installments,
-                firstPaymentDate,
+            const firstPaymentDate = format(parse(`${data.invoice_month}-01`, 'yyyy-MM-dd', new Date()), "dd/MM/yyyy");
+            const productsText = formattedProducts
+              .map(p => `• ${p.description}: ${formatCurrency(p.value)}`)
+              .join("\n");
+
+            const message = `Olá ${clientName}! 🛍️
+
+Muito obrigado pela sua compra! Aqui está o resumo:
+
+*PRODUTOS:*
+${productsText}
+
+*TOTAL:* ${formatCurrency(totalAmount)}
+
+Forma de pagamento: ${paymentMethodLabel}
+Parcelamento: ${data.installments}x de ${formatCurrency(installmentAmount)}
+Vencimento da 1ª parcela: ${firstPaymentDate}
+
+Agradecemos a preferência! 🙏`;
+
+            const response = await fetch("https://evonovo.meusabia.com/message/sendText/detrancaruarushopping", {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'apikey': 'd87d8d927b31c4166af041bcf6d14cf0'
               },
+              body: JSON.stringify({
+                number: clientPhone.replace(/\D/g, '').startsWith('55') 
+                  ? clientPhone.replace(/\D/g, '') 
+                  : '55' + clientPhone.replace(/\D/g, ''),
+                text: message
+              })
             });
+
+            if (!response.ok) {
+              throw new Error("Erro ao enviar mensagem");
+            }
           } catch (error) {
             console.error('Error sending WhatsApp message:', error);
           }
@@ -260,15 +284,40 @@ export function CreateDebtDialog({ clientId, clientName, clientPhone }: { client
 
           // Enviar mensagem WhatsApp após criar a venda
           try {
-            await supabase.functions.invoke('send-whatsapp-message', {
-              body: {
-                phone: clientPhone,
-                customerName: clientName,
-                products: formattedProducts,
-                totalAmount,
-                paymentMethod: paymentMethodLabel,
+            const productsText = formattedProducts
+              .map(p => `• ${p.description}: ${formatCurrency(p.value)}`)
+              .join("\n");
+
+            const message = `Olá ${clientName}! 🛍️
+
+Muito obrigado pela sua compra! Aqui está o resumo:
+
+*PRODUTOS:*
+${productsText}
+
+*TOTAL:* ${formatCurrency(totalAmount)}
+
+Forma de pagamento: ${paymentMethodLabel}
+
+Agradecemos a preferência! 🙏`;
+
+            const response = await fetch("https://evonovo.meusabia.com/message/sendText/detrancaruarushopping", {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+                'apikey': 'd87d8d927b31c4166af041bcf6d14cf0'
               },
+              body: JSON.stringify({
+                number: clientPhone.replace(/\D/g, '').startsWith('55') 
+                  ? clientPhone.replace(/\D/g, '') 
+                  : '55' + clientPhone.replace(/\D/g, ''),
+                text: message
+              })
             });
+
+            if (!response.ok) {
+              throw new Error("Erro ao enviar mensagem");
+            }
           } catch (error) {
             console.error('Error sending WhatsApp message:', error);
           }
