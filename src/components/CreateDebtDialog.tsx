@@ -70,14 +70,18 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
   const [products, setProducts] = useState<Product[]>([{ description: "", value: 0 }]);
   const { toast } = useToast();
 
+  const today = new Date();
+  const localDate = today.toLocaleDateString('en-CA'); // Formato YYYY-MM-DD
+  const localMonth = today.toISOString().split('T')[0].substring(0, 7); // Formato YYYY-MM
+
   const form = useForm<CreateClientForm>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       useInstallments: false,
       amount: 0,
       description: "",
-      transaction_date: new Date().toISOString().split('T')[0],
-      invoice_month: new Date().toISOString().split('T')[0].substring(0, 7),
+      transaction_date: localDate,
+      invoice_month: localMonth,
       installments: 1,
       paymentMethod: "credito_loja",
     },
