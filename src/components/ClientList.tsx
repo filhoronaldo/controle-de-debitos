@@ -1,3 +1,4 @@
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
@@ -29,6 +30,7 @@ export function ClientList() {
         .select(`
           id,
           name,
+          phone,
           invoice_day,
           last_invoice_sent_at,
           last_invoice_sent_month,
@@ -159,6 +161,7 @@ export function ClientList() {
         return {
           id: client.id,
           name: client.name,
+          phone: client.phone,
           total_debt: totalDebt,
           status,
           next_due_date: nextDueDate,
