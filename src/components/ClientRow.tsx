@@ -1,4 +1,3 @@
-
 import { Button } from "@/components/ui/button";
 import { CreditCard, History, User, Send, Loader2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -189,7 +188,6 @@ export function ClientRow({
   };
 
   const getDueInfo = () => {
-    // Não retornar null se tivermos fatura atrasada
     if (!client.next_invoice_amount && !client.overdue_amount) {
       return null;
     }
@@ -273,7 +271,11 @@ export function ClientRow({
         </div>
       </div>
       <div className="grid grid-cols-2 gap-2">
-        <CreateDebtDialog clientId={client.id} clientName={client.name} />
+        <CreateDebtDialog 
+          clientId={client.id} 
+          clientName={client.name} 
+          clientPhone={client.phone} 
+        />
         <Button 
           variant="outline" 
           size="sm"
