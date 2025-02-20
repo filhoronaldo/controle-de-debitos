@@ -64,7 +64,7 @@ const PAYMENT_METHODS = [
   { id: "cartao_debito", label: "Cartão de Débito" },
 ] as const;
 
-export function CreateDebtDialog({ clientId, clientName }: { clientId: string, clientName: string }) {
+export function CreateDebtDialog({ clientId, clientName, clientPhone }: { clientId: string, clientName: string, clientPhone: string }) {
   const [open, setOpen] = useState(false);
   const [isProductMode, setIsProductMode] = useState(false);
   const [products, setProducts] = useState<Product[]>([{ description: "", value: 0 }]);
@@ -154,7 +154,10 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
           value: product.value
         }));
 
-        if (data.useInstallments && data.installments > 1) {
+        const isCredit = data.paymentMethod === "credito_loja";
+        const paymentMethodLabel = PAYMENT_METHODS.find(m => m.id === data.paymentMethod)?.label;
+
+        if (isCredit && data.useInstallments && data.installments > 1) {
           const installmentAmount = totalAmount / data.installments;
           const baseMonth = parse(`${data.invoice_month}-01`, 'yyyy-MM-dd', new Date());
           
@@ -198,6 +201,25 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
             title: "Venda parcelada criada com sucesso!",
             description: `${data.installments}x de ${formatCurrency(installmentAmount)} para ${clientName}`,
           });
+
+          // Enviar mensagem WhatsApp após criar a venda
+          try {
+            const firstPaymentDate = `${data.invoice_month}-01`;
+            await supabase.functions.invoke('send-whatsapp-message', {
+              body: {
+                phone: clientPhone,
+                customerName: clientName,
+                products: formattedProducts,
+                totalAmount,
+                paymentMethod: paymentMethodLabel,
+                installments: data.installments,
+                installmentAmount: totalAmount / data.installments,
+                firstPaymentDate,
+              },
+            });
+          } catch (error) {
+            console.error('Error sending WhatsApp message:', error);
+          }
         } else {
           // Criar débito único
           const debtData = {
@@ -235,6 +257,21 @@ export function CreateDebtDialog({ clientId, clientName }: { clientId: string, c
             title: "Venda criada com sucesso!",
             description: `Venda de ${formatCurrency(totalAmount)} registrada para ${clientName}`,
           });
+
+          // Enviar mensagem WhatsApp após criar a venda
+          try {
+            await supabase.functions.invoke('send-whatsapp-message', {
+              body: {
+                phone: clientPhone,
+                customerName: clientName,
+                products: formattedProducts,
+                totalAmount,
+                paymentMethod: paymentMethodLabel,
+              },
+            });
+          } catch (error) {
+            console.error('Error sending WhatsApp message:', error);
+          }
         }
       } else {
         // Modo Valor
