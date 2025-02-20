@@ -185,24 +185,11 @@ export function CreateDebtDialog({ clientId, clientName, clientPhone }: { client
 
           if (debtError) throw debtError;
 
-          // Criar venda associada aos débitos
-          const { error: saleError } = await supabase
-            .from('lblz_sales')
-            .insert({
-              client_id: clientId,
-              total_amount: totalAmount,
-              products: formattedProducts,
-              payment_method: PAYMENT_METHODS.find(m => m.id === data.paymentMethod)?.label
-            });
-
-          if (saleError) throw saleError;
-
           toast({
             title: "Venda parcelada criada com sucesso!",
             description: `${data.installments}x de ${formatCurrency(installmentAmount)} para ${clientName}`,
           });
 
-          // Enviar mensagem WhatsApp após criar a venda
           try {
             const firstPaymentDate = format(parse(`${data.invoice_month}-01`, 'yyyy-MM-dd', new Date()), "dd/MM/yyyy");
             const productsText = formattedProducts
@@ -245,7 +232,6 @@ Agradecemos a preferência! 🙏`;
             console.error('Error sending WhatsApp message:', error);
           }
         } else {
-          // Criar débito único
           const debtData = {
             client_id: clientId,
             amount: totalAmount,
@@ -264,7 +250,6 @@ Agradecemos a preferência! 🙏`;
 
           if (debtError) throw debtError;
 
-          // Criar venda associada ao débito
           const { error: saleError } = await supabase
             .from('lblz_sales')
             .insert({
@@ -282,12 +267,13 @@ Agradecemos a preferência! 🙏`;
             description: `Venda de ${formatCurrency(totalAmount)} registrada para ${clientName}`,
           });
 
-          // Enviar mensagem WhatsApp após criar a venda
           try {
             const productsText = formattedProducts
               .map(p => `• ${p.description}: ${formatCurrency(p.value)}`)
               .join("\n");
 
+            const vencimento = format(parse(`${data.invoice_month}-01`, 'yyyy-MM-dd', new Date()), "dd/MM/yyyy");
+            
             const message = `Olá ${clientName}! 🛍️
 
 Muito obrigado pela sua compra! Aqui está o resumo:
@@ -298,6 +284,7 @@ ${productsText}
 *TOTAL:* ${formatCurrency(totalAmount)}
 
 Forma de pagamento: ${paymentMethodLabel}
+Data de vencimento: ${vencimento}
 
 Agradecemos a preferência! 🙏`;
 
@@ -323,7 +310,6 @@ Agradecemos a preferência! 🙏`;
           }
         }
       } else {
-        // Modo Valor
         if (data.useInstallments && data.installments > 1) {
           const installmentAmount = data.amount / data.installments;
           const baseMonth = parse(`${data.invoice_month}-01`, 'yyyy-MM-dd', new Date());
