@@ -157,46 +157,47 @@ export function CreateDebtDialog({ clientId, clientName, clientPhone }: { client
         const isCredit = data.paymentMethod === "credito_loja";
         const paymentMethodLabel = PAYMENT_METHODS.find(m => m.id === data.paymentMethod)?.label;
 
-        if (isCredit && data.useInstallments && data.installments > 1) {
-          const installmentAmount = totalAmount / data.installments;
-          const baseMonth = parse(`${data.invoice_month}-01`, 'yyyy-MM-dd', new Date());
-          
-          const installmentDebts = Array.from({ length: data.installments }, (_, index) => {
-            const installmentMonth = addMonths(baseMonth, index);
-            const originalAmountText = `(Origem - ${formatCurrency(totalAmount)})`;
-            const description = data.description 
-              ? `${data.description} ${originalAmountText} (${index + 1}/${data.installments})`
-              : `Parcela ${originalAmountText} (${index + 1}/${data.installments})`;
-              
-            return {
-              client_id: clientId,
-              amount: installmentAmount,
-              description,
-              transaction_date: data.transaction_date,
-              invoice_month: format(installmentMonth, 'yyyy-MM-01'),
-              products: formattedProducts as Json,
-              status: 'aberta' as const
-            };
-          });
+        if (isCredit) {
+          if (data.useInstallments && data.installments > 1) {
+            const installmentAmount = totalAmount / data.installments;
+            const baseMonth = parse(`${data.invoice_month}-01`, 'yyyy-MM-dd', new Date());
+            
+            const installmentDebts = Array.from({ length: data.installments }, (_, index) => {
+              const installmentMonth = addMonths(baseMonth, index);
+              const originalAmountText = `(Origem - ${formatCurrency(totalAmount)})`;
+              const description = data.description 
+                ? `${data.description} ${originalAmountText} (${index + 1}/${data.installments})`
+                : `Parcela ${originalAmountText} (${index + 1}/${data.installments})`;
+                
+              return {
+                client_id: clientId,
+                amount: installmentAmount,
+                description,
+                transaction_date: data.transaction_date,
+                invoice_month: format(installmentMonth, 'yyyy-MM-01'),
+                products: formattedProducts as Json,
+                status: 'aberta' as const
+              };
+            });
 
-          const { error: debtError } = await supabase
-            .from('lblz_debts')
-            .insert(installmentDebts);
+            const { error: debtError } = await supabase
+              .from('lblz_debts')
+              .insert(installmentDebts);
 
-          if (debtError) throw debtError;
+            if (debtError) throw debtError;
 
-          toast({
-            title: "Venda parcelada criada com sucesso!",
-            description: `${data.installments}x de ${formatCurrency(installmentAmount)} para ${clientName}`,
-          });
+            toast({
+              title: "Venda parcelada criada com sucesso!",
+              description: `${data.installments}x de ${formatCurrency(installmentAmount)} para ${clientName}`,
+            });
 
-          try {
-            const firstPaymentDate = format(parse(`${data.invoice_month}-01`, 'yyyy-MM-dd', new Date()), "dd/MM/yyyy");
-            const productsText = formattedProducts
-              .map(p => `• ${p.description}: ${formatCurrency(p.value)}`)
-              .join("\n");
+            try {
+              const firstPaymentDate = format(parse(`${data.invoice_month}-01`, 'yyyy-MM-dd', new Date()), "dd/MM/yyyy");
+              const productsText = formattedProducts
+                .map(p => `• ${p.description}: ${formatCurrency(p.value)}`)
+                .join("\n");
 
-            const message = `Olá ${clientName}! 🛍️
+              const message = `Olá ${clientName}! 🛍️
 
 Muito obrigado pela sua compra! Aqui está o resumo:
 
@@ -211,53 +212,112 @@ Vencimento da 1ª parcela: ${firstPaymentDate}
 
 Agradecemos a preferência! 🙏`;
 
-            const response = await fetch("https://evonovo.meusabia.com/message/sendText/detrancaruarushopping", {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'apikey': 'd87d8d927b31c4166af041bcf6d14cf0'
-              },
-              body: JSON.stringify({
-                number: clientPhone.replace(/\D/g, '').startsWith('55') 
-                  ? clientPhone.replace(/\D/g, '') 
-                  : '55' + clientPhone.replace(/\D/g, ''),
-                text: message
-              })
+              const response = await fetch("https://evonovo.meusabia.com/message/sendText/detrancaruarushopping", {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'apikey': 'd87d8d927b31c4166af041bcf6d14cf0'
+                },
+                body: JSON.stringify({
+                  number: clientPhone.replace(/\D/g, '').startsWith('55') 
+                    ? clientPhone.replace(/\D/g, '') 
+                    : '55' + clientPhone.replace(/\D/g, ''),
+                  text: message
+                })
+              });
+
+              if (!response.ok) {
+                throw new Error("Erro ao enviar mensagem");
+              }
+            } catch (error) {
+              console.error('Error sending WhatsApp message:', error);
+            }
+          } else {
+            const debtData = {
+              client_id: clientId,
+              amount: totalAmount,
+              description: data.description,
+              transaction_date: data.transaction_date,
+              invoice_month: `${data.invoice_month}-01`,
+              products: formattedProducts as Json,
+              status: 'aberta' as const
+            };
+
+            const { data: insertedDebt, error: debtError } = await supabase
+              .from('lblz_debts')
+              .insert(debtData)
+              .select()
+              .single();
+
+            if (debtError) throw debtError;
+
+            const { error: saleError } = await supabase
+              .from('lblz_sales')
+              .insert({
+                client_id: clientId,
+                total_amount: totalAmount,
+                products: formattedProducts,
+                payment_method: paymentMethodLabel,
+                debt_id: insertedDebt.id
+              });
+
+            if (saleError) throw saleError;
+
+            toast({
+              title: "Venda criada com sucesso!",
+              description: `Venda de ${formatCurrency(totalAmount)} registrada para ${clientName}`,
             });
 
-            if (!response.ok) {
-              throw new Error("Erro ao enviar mensagem");
+            try {
+              const productsText = formattedProducts
+                .map(p => `• ${p.description}: ${formatCurrency(p.value)}`)
+                .join("\n");
+
+              const vencimento = format(parse(`${data.invoice_month}-01`, 'yyyy-MM-dd', new Date()), "dd/MM/yyyy");
+              
+              const message = `Olá ${clientName}! 🛍️
+
+Muito obrigado pela sua compra! Aqui está o resumo:
+
+*PRODUTOS:*
+${productsText}
+
+*TOTAL:* ${formatCurrency(totalAmount)}
+
+Forma de pagamento: ${paymentMethodLabel}
+Data de vencimento: ${vencimento}
+
+Agradecemos a preferência! 🙏`;
+
+              const response = await fetch("https://evonovo.meusabia.com/message/sendText/detrancaruarushopping", {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'apikey': 'd87d8d927b31c4166af041bcf6d14cf0'
+                },
+                body: JSON.stringify({
+                  number: clientPhone.replace(/\D/g, '').startsWith('55') 
+                    ? clientPhone.replace(/\D/g, '') 
+                    : '55' + clientPhone.replace(/\D/g, ''),
+                  text: message
+                })
+              });
+
+              if (!response.ok) {
+                throw new Error("Erro ao enviar mensagem");
+              }
+            } catch (error) {
+              console.error('Error sending WhatsApp message:', error);
             }
-          } catch (error) {
-            console.error('Error sending WhatsApp message:', error);
           }
         } else {
-          const debtData = {
-            client_id: clientId,
-            amount: totalAmount,
-            description: data.description,
-            transaction_date: data.transaction_date,
-            invoice_month: `${data.invoice_month}-01`,
-            products: formattedProducts as Json,
-            status: 'aberta' as const
-          };
-
-          const { data: insertedDebt, error: debtError } = await supabase
-            .from('lblz_debts')
-            .insert(debtData)
-            .select()
-            .single();
-
-          if (debtError) throw debtError;
-
           const { error: saleError } = await supabase
             .from('lblz_sales')
             .insert({
               client_id: clientId,
               total_amount: totalAmount,
               products: formattedProducts,
-              payment_method: PAYMENT_METHODS.find(m => m.id === data.paymentMethod)?.label,
-              debt_id: insertedDebt.id
+              payment_method: paymentMethodLabel
             });
 
           if (saleError) throw saleError;
@@ -272,8 +332,6 @@ Agradecemos a preferência! 🙏`;
               .map(p => `• ${p.description}: ${formatCurrency(p.value)}`)
               .join("\n");
 
-            const vencimento = format(parse(`${data.invoice_month}-01`, 'yyyy-MM-dd', new Date()), "dd/MM/yyyy");
-            
             const message = `Olá ${clientName}! 🛍️
 
 Muito obrigado pela sua compra! Aqui está o resumo:
@@ -284,7 +342,6 @@ ${productsText}
 *TOTAL:* ${formatCurrency(totalAmount)}
 
 Forma de pagamento: ${paymentMethodLabel}
-Data de vencimento: ${vencimento}
 
 Agradecemos a preferência! 🙏`;
 
