@@ -180,11 +180,26 @@ export function CreateDebtDialog({ clientId, clientName, clientPhone }: { client
               };
             });
 
-            const { error: debtError } = await supabase
+            const { data: insertedDebts, error: debtError } = await supabase
               .from('lblz_debts')
-              .insert(installmentDebts);
+              .insert(installmentDebts)
+              .select()
+              .order('invoice_month', { ascending: true })
+              .limit(1);
 
             if (debtError) throw debtError;
+
+            const { error: saleError } = await supabase
+              .from('lblz_sales')
+              .insert({
+                client_id: clientId,
+                total_amount: totalAmount,
+                products: formattedProducts,
+                payment_method: paymentMethodLabel,
+                debt_id: insertedDebts[0].id
+              });
+
+            if (saleError) throw saleError;
 
             toast({
               title: "Venda parcelada criada com sucesso!",
