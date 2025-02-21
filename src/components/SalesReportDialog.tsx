@@ -35,7 +35,7 @@ export function SalesReportDialog() {
 
   const deleteSale = useMutation({
     mutationFn: async (saleId: string) => {
-      // Se a venda tem débitos associados, primeiro excluímos os débitos
+      // Primeiro obtemos os dados da venda
       const { data: sale } = await supabase
         .from('lblz_sales')
         .select('debt_id')
@@ -52,8 +52,18 @@ export function SalesReportDialog() {
         if (payments && payments.length > 0) {
           throw new Error("Não é possível excluir uma venda que possui pagamentos registrados.");
         }
+      }
 
-        // Se não há pagamentos, podemos excluir os débitos
+      // Primeiro excluímos a venda
+      const { error: saleError } = await supabase
+        .from('lblz_sales')
+        .delete()
+        .eq('id', saleId);
+
+      if (saleError) throw saleError;
+
+      // Se havia um débito associado, agora podemos excluí-lo
+      if (sale?.debt_id) {
         const { error: debtsError } = await supabase
           .from('lblz_debts')
           .delete()
@@ -61,14 +71,6 @@ export function SalesReportDialog() {
 
         if (debtsError) throw debtsError;
       }
-
-      // Por fim, excluímos a venda
-      const { error: saleError } = await supabase
-        .from('lblz_sales')
-        .delete()
-        .eq('id', saleId);
-
-      if (saleError) throw saleError;
     },
     onSuccess: () => {
       toast.success("Venda excluída com sucesso!");
