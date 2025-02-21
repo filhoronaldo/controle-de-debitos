@@ -1,3 +1,4 @@
+
 import { DashboardCard } from "@/components/DashboardCard";
 import { ClientList } from "@/components/ClientList";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { startOfDay, endOfDay } from "date-fns";
 import { formatCurrency } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { SalesReportDialog } from "@/components/SalesReportDialog";
 
 const Index = () => {
   const isMobile = useIsMobile();
@@ -66,7 +68,10 @@ const Index = () => {
     <div className="container mx-auto px-2 py-4 space-y-4 animate-fadeIn max-w-full md:max-w-7xl">
       <div className="flex flex-col md:flex-row justify-between items-center gap-3">
         <h1 className="text-xl md:text-3xl font-heading font-bold">Controle de Débitos</h1>
-        <CreateClientDialog />
+        <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
+          <CreateClientDialog />
+          <SalesReportDialog />
+        </div>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
