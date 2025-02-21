@@ -67,7 +67,7 @@ const PAYMENT_METHODS = [
 export function CreateDebtDialog({ clientId, clientName, clientPhone }: { clientId: string, clientName: string, clientPhone: string }) {
   const [open, setOpen] = useState(false);
   const [isProductMode, setIsProductMode] = useState(false);
-  const [products, setProducts] = useState<Product[]>([{ description: "", value: 0 }]);
+  const [products, setProducts] = useState([{ description: "", value: 0 }]);
   const { toast } = useToast();
 
   const today = new Date();
@@ -113,7 +113,7 @@ export function CreateDebtDialog({ clientId, clientName, clientPhone }: { client
   const updateProduct = (index: number, field: keyof Product, value: string | number) => {
     const newProducts = [...products];
     if (field === 'value') {
-      const numericValue = typeof value === 'string' 
+      const numericValue = typeof value === 'string'
         ? Number(value.replace(/[^\d,]/g, '').replace(',', '.')) / 100
         : value;
       newProducts[index][field] = numericValue;
@@ -140,18 +140,9 @@ export function CreateDebtDialog({ clientId, clientName, clientPhone }: { client
     try {
       if (isProductMode) {
         const totalAmount = products.reduce((sum, product) => sum + (product.value || 0), 0);
-        if (totalAmount <= 0) {
-          toast({
-            variant: "destructive",
-            title: "Erro ao criar venda",
-            description: "O valor total dos produtos deve ser maior que zero.",
-          });
-          return;
-        }
-
         const formattedProducts = products.map((product, idx) => ({
           description: product.description || `Produto ${idx + 1}`,
-          value: product.value
+          value: product.value,
         }));
 
         const isCredit = data.paymentMethod === "credito_loja";
@@ -161,14 +152,14 @@ export function CreateDebtDialog({ clientId, clientName, clientPhone }: { client
           if (data.useInstallments && data.installments > 1) {
             const installmentAmount = totalAmount / data.installments;
             const baseMonth = parse(`${data.invoice_month}-01`, 'yyyy-MM-dd', new Date());
-            
+
             const installmentDebts = Array.from({ length: data.installments }, (_, index) => {
               const installmentMonth = addMonths(baseMonth, index);
               const originalAmountText = `(Origem - ${formatCurrency(totalAmount)})`;
-              const description = data.description 
+              const description = data.description
                 ? `${data.description} ${originalAmountText} (${index + 1}/${data.installments})`
                 : `Parcela ${originalAmountText} (${index + 1}/${data.installments})`;
-                
+
               return {
                 client_id: clientId,
                 amount: installmentAmount,
@@ -176,7 +167,7 @@ export function CreateDebtDialog({ clientId, clientName, clientPhone }: { client
                 transaction_date: data.transaction_date,
                 invoice_month: format(installmentMonth, 'yyyy-MM-01'),
                 products: formattedProducts as Json,
-                status: 'aberta' as const
+                status: 'aberta' as const,
               };
             });
 
@@ -189,17 +180,28 @@ export function CreateDebtDialog({ clientId, clientName, clientPhone }: { client
 
             if (debtError) throw debtError;
 
-            const { error: saleError } = await supabase
+            const { data: saleData, error: saleError } = await supabase
               .from('lblz_sales')
               .insert({
                 client_id: clientId,
                 total_amount: totalAmount,
                 products: formattedProducts,
                 payment_method: paymentMethodLabel,
-                debt_id: insertedDebts[0].id
-              });
+                debt_id: insertedDebts[0].id,
+              })
+              .select('id')
+              .single();
 
             if (saleError) throw saleError;
+
+            const saleId = saleData.id;
+
+            const { error: updateDebtError } = await supabase
+              .from('lblz_debts')
+              .update({ sale_id: saleId })
+              .eq('id', insertedDebts[0].id);
+
+            if (updateDebtError) throw updateDebtError;
 
             toast({
               title: "Venda parcelada criada com sucesso!",
@@ -234,8 +236,8 @@ Agradecemos a preferência! 🙏`;
                   'apikey': 'd87d8d927b31c4166af041bcf6d14cf0'
                 },
                 body: JSON.stringify({
-                  number: clientPhone.replace(/\D/g, '').startsWith('55') 
-                    ? clientPhone.replace(/\D/g, '') 
+                  number: clientPhone.replace(/\D/g, '').startsWith('55')
+                    ? clientPhone.replace(/\D/g, '')
                     : '55' + clientPhone.replace(/\D/g, ''),
                   text: message
                 })
@@ -255,28 +257,41 @@ Agradecemos a preferência! 🙏`;
               transaction_date: data.transaction_date,
               invoice_month: `${data.invoice_month}-01`,
               products: formattedProducts as Json,
-              status: 'aberta' as const
+              status: 'aberta' as const,
             };
 
             const { data: insertedDebt, error: debtError } = await supabase
               .from('lblz_debts')
               .insert(debtData)
-              .select()
+              .select('id')
               .single();
 
             if (debtError) throw debtError;
 
-            const { error: saleError } = await supabase
+            const debtId = insertedDebt.id;
+
+            const { data: saleData, error: saleError } = await supabase
               .from('lblz_sales')
               .insert({
                 client_id: clientId,
                 total_amount: totalAmount,
                 products: formattedProducts,
                 payment_method: paymentMethodLabel,
-                debt_id: insertedDebt.id
-              });
+                debt_id: debtId,
+              })
+              .select('id')
+              .single();
 
             if (saleError) throw saleError;
+
+            const saleId = saleData.id;
+
+            const { error: updateDebtError } = await supabase
+              .from('lblz_debts')
+              .update({ sale_id: saleId })
+              .eq('id', debtId);
+
+            if (updateDebtError) throw updateDebtError;
 
             toast({
               title: "Venda criada com sucesso!",
@@ -289,7 +304,7 @@ Agradecemos a preferência! 🙏`;
                 .join("\n");
 
               const vencimento = format(parse(`${data.invoice_month}-01`, 'yyyy-MM-dd', new Date()), "dd/MM/yyyy");
-              
+
               const message = `Olá ${clientName}! 🛍️
 
 Muito obrigado pela sua compra! Aqui está o resumo:
@@ -311,8 +326,8 @@ Agradecemos a preferência! 🙏`;
                   'apikey': 'd87d8d927b31c4166af041bcf6d14cf0'
                 },
                 body: JSON.stringify({
-                  number: clientPhone.replace(/\D/g, '').startsWith('55') 
-                    ? clientPhone.replace(/\D/g, '') 
+                  number: clientPhone.replace(/\D/g, '').startsWith('55')
+                    ? clientPhone.replace(/\D/g, '')
                     : '55' + clientPhone.replace(/\D/g, ''),
                   text: message
                 })
@@ -332,7 +347,7 @@ Agradecemos a preferência! 🙏`;
               client_id: clientId,
               total_amount: totalAmount,
               products: formattedProducts,
-              payment_method: paymentMethodLabel
+              payment_method: paymentMethodLabel,
             });
 
           if (saleError) throw saleError;
@@ -367,8 +382,8 @@ Agradecemos a preferência! 🙏`;
                 'apikey': 'd87d8d927b31c4166af041bcf6d14cf0'
               },
               body: JSON.stringify({
-                number: clientPhone.replace(/\D/g, '').startsWith('55') 
-                  ? clientPhone.replace(/\D/g, '') 
+                number: clientPhone.replace(/\D/g, '').startsWith('55')
+                  ? clientPhone.replace(/\D/g, '')
                   : '55' + clientPhone.replace(/\D/g, ''),
                 text: message
               })
@@ -385,21 +400,21 @@ Agradecemos a preferência! 🙏`;
         if (data.useInstallments && data.installments > 1) {
           const installmentAmount = data.amount / data.installments;
           const baseMonth = parse(`${data.invoice_month}-01`, 'yyyy-MM-dd', new Date());
-          
+
           const installmentDebts = Array.from({ length: data.installments }, (_, index) => {
             const installmentMonth = addMonths(baseMonth, index);
             const originalAmountText = `(Origem - ${formatCurrency(data.amount)})`;
-            const description = data.description 
+            const description = data.description
               ? `${data.description} ${originalAmountText} (${index + 1}/${data.installments})`
               : `Parcela ${originalAmountText} (${index + 1}/${data.installments})`;
-              
+
             return {
               client_id: clientId,
               amount: installmentAmount,
               description,
               transaction_date: data.transaction_date,
               invoice_month: format(installmentMonth, 'yyyy-MM-01'),
-              status: 'aberta' as const
+              status: 'aberta' as const,
             };
           });
 
@@ -422,7 +437,7 @@ Agradecemos a preferência! 🙏`;
               description: data.description,
               transaction_date: data.transaction_date,
               invoice_month: `${data.invoice_month}-01`,
-              status: 'aberta'
+              status: 'aberta',
             });
 
           if (error) throw error;
@@ -451,244 +466,144 @@ Agradecemos a preferência! 🙏`;
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant="outline" size="sm" className="w-full md:w-auto">
-          <UserPlus className="h-4 w-4 mr-1" />
+        <Button variant="outline">
+          <Plus className="mr-2 h-4 w-4" />
           Incluir Débito
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-h-[80vh] overflow-y-auto w-[95vw] max-w-lg p-4 md:p-6">
+      <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle className="text-lg md:text-xl">Novo Débito para {clientName}</DialogTitle>
+          <DialogTitle>Novo Débito para {clientName}</DialogTitle>
         </DialogHeader>
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 mt-4">
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <FormLabel className="text-base">
-                  {isProductMode ? "Produtos" : "Valor"}
-                </FormLabel>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={toggleMode}
-                  className="ml-2"
-                >
-                  <ArrowLeftRight className="h-4 w-4 mr-2" />
-                  {isProductMode ? "Modo Valor" : "Modo Produtos"}
-                </Button>
-              </div>
-
-              {isProductMode ? (
-                <div className="space-y-4">
-                  {products.map((product, index) => (
-                    <div key={index} className="flex gap-2 items-start">
-                      <div className="flex-1">
-                        <Input
-                          placeholder={`Produto ${index + 1}`}
-                          value={product.description}
-                          onChange={(e) => updateProduct(index, 'description', e.target.value)}
-                          className="mb-2"
-                        />
-                        <Input
-                          placeholder="R$ 0,00"
-                          value={formatCurrency(product.value)}
-                          onChange={(e) => {
-                            const value = e.target.value.replace(/\D/g, '');
-                            updateProduct(index, 'value', value ? parseInt(value) / 100 : 0);
-                          }}
-                        />
-                      </div>
-                      <div className="flex flex-col gap-2">
-                        {index === products.length - 1 && (
-                          <Button
-                            type="button"
-                            size="icon"
-                            onClick={addProduct}
-                          >
-                            <Plus className="h-4 w-4" />
-                          </Button>
-                        )}
-                        {products.length > 1 && (
-                          <Button
-                            type="button"
-                            variant="destructive"
-                            size="icon"
-                            onClick={() => removeProduct(index)}
-                          >
-                            <Minus className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                  <div className="mt-4 text-right font-medium">
-                    Total: {formatCurrency(form.watch('amount'))}
-                  </div>
-                </div>
-              ) : (
-                <>
-                  <FormField
-                    control={form.control}
-                    name="amount"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormControl>
-                          <Input
-                            placeholder="R$ 0,00"
-                            value={formatCurrency(field.value)}
-                            onChange={(e) => {
-                              const value = e.target.value.replace(/\D/g, '');
-                              field.onChange(value ? parseInt(value) / 100 : 0);
-                            }}
-                            className="text-lg md:text-base"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="useInstallments"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                        <div className="space-y-0.5">
-                          <FormLabel className="text-base">Parcelar</FormLabel>
-                        </div>
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-
-                  {form.watch('useInstallments') && (
-                    <FormField
-                      control={form.control}
-                      name="installments"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-base">Número de Parcelas</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              min="1"
-                              max="48"
-                              className="text-lg md:text-base"
-                              {...field}
-                            />
-                          </FormControl>
-                          {form.watch('amount') > 0 && field.value > 0 && (
-                            <p className="text-sm text-muted-foreground mt-2">
-                              {field.value}x de {formatCurrency(form.watch('amount') / field.value)}
-                            </p>
-                          )}
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  )}
-                </>
-              )}
-
-              {isProductMode && (
-                <FormField
-                  control={form.control}
-                  name="paymentMethod"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-base">Forma de Pagamento</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione a forma de pagamento" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {PAYMENT_METHODS.map((method) => (
-                            <SelectItem key={method.id} value={method.id}>
-                              {method.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
-
-              {isProductMode && form.watch('paymentMethod') === 'credito_loja' && (
-                <>
-                  <FormField
-                    control={form.control}
-                    name="useInstallments"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                        <div className="space-y-0.5">
-                          <FormLabel className="text-base">Parcelar</FormLabel>
-                        </div>
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-
-                  {form.watch('useInstallments') && (
-                    <FormField
-                      control={form.control}
-                      name="installments"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-base">Número de Parcelas</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              min="1"
-                              max="48"
-                              className="text-lg md:text-base"
-                              {...field}
-                            />
-                          </FormControl>
-                          {form.watch('amount') > 0 && field.value > 0 && (
-                            <p className="text-sm text-muted-foreground mt-2">
-                              {field.value}x de {formatCurrency(form.watch('amount') / field.value)}
-                            </p>
-                          )}
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                  )}
-                </>
-              )}
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <div className="flex justify-between items-center">
+              <span>{isProductMode ? "Produtos" : "Valor"}</span>
+              <Button type="button" variant="link" onClick={toggleMode}>
+                {isProductMode ? "Modo Valor" : "Modo Produtos"}
+              </Button>
             </div>
+
+            {isProductMode ? (
+              <>
+                {products.map((product, index) => (
+                  <div key={index} className="space-y-2">
+                    <Input
+                      placeholder={`Descrição do Produto ${index + 1}`}
+                      value={product.description}
+                      onChange={(e) => updateProduct(index, 'description', e.target.value)}
+                    />
+                    <Input
+                      placeholder={`Valor do Produto ${index + 1}`}
+                      value={product.value.toFixed(2)}
+                      onChange={(e) => {
+                        const value = e.target.value.replace(/\D/g, '');
+                        updateProduct(index, 'value', value ? parseInt(value) / 100 : 0);
+                      }}
+                    />
+                    {index === products.length - 1 && (
+                      <Button type="button" variant="outline" onClick={addProduct}>
+                        <Plus className="mr-2 h-4 w-4" />
+                        Adicionar Produto
+                      </Button>
+                    )}
+                    {products.length > 1 && (
+                      <Button type="button" variant="destructive" onClick={() => removeProduct(index)}>
+                        <Minus className="mr-2 h-4 w-4" />
+                        Remover Produto
+                      </Button>
+                    )}
+                  </div>
+                ))}
+                <div className="text-lg font-bold">
+                  Total: {formatCurrency(form.watch('amount'))}
+                </div>
+              </>
+            ) : (
+              <FormField
+                control={form.control}
+                name="amount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Valor</FormLabel>
+                    <FormControl>
+                      <Input
+                        placeholder="Valor"
+                        value={field.value.toFixed(2)}
+                        onChange={(e) => {
+                          const value = e.target.value.replace(/\D/g, '');
+                          field.onChange(value ? parseInt(value) / 100 : 0);
+                        }}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <FormField
               control={form.control}
-              name="description"
+              name="useInstallments"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                  <div className="space-y-0.5">
+                    <FormLabel>Parcelar</FormLabel>
+                  </div>
+                  <FormControl>
+                    <Checkbox checked={field.value} onCheckedChange={field.onChange} />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            {form.watch('useInstallments') && (
+              <FormField
+                control={form.control}
+                name="installments"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Número de Parcelas</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="number"
+                        min="1"
+                        max="48"
+                        value={field.value}
+                        onChange={field.onChange}
+                      />
+                    </FormControl>
+                    {form.watch('amount') > 0 && field.value > 0 && (
+                      <div className="text-sm text-muted-foreground">
+                        {field.value}x de {formatCurrency(form.watch('amount') / field.value)}
+                      </div>
+                    )}
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            <FormField
+              control={form.control}
+              name="paymentMethod"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-base">Descrição</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      placeholder="Descrição do débito" 
-                      className="min-h-[80px] text-base"
-                      {...field} 
-                    />
-                  </FormControl>
+                  <FormLabel>Forma de Pagamento</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione uma forma de pagamento" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      {PAYMENT_METHODS.map((method) => (
+                        <SelectItem key={method.id} value={method.id}>
+                          {method.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                   <FormMessage />
                 </FormItem>
               )}
@@ -701,13 +616,9 @@ Agradecemos a preferência! 🙏`;
                   name="transaction_date"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-base">Data da Transação</FormLabel>
+                      <FormLabel>Data da Transação</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="date" 
-                          className="text-lg md:text-base"
-                          {...field} 
-                        />
+                        <Input type="date" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -719,13 +630,9 @@ Agradecemos a preferência! 🙏`;
                   name="invoice_month"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-base">Mês/Ano da Fatura</FormLabel>
+                      <FormLabel>Mês/Ano da Fatura</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="month" 
-                          className="text-lg md:text-base"
-                          {...field} 
-                        />
+                        <Input type="month" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -734,7 +641,21 @@ Agradecemos a preferência! 🙏`;
               </>
             )}
 
-            <Button type="submit" className="w-full text-base py-6 md:py-4">
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Descrição</FormLabel>
+                  <FormControl>
+                    <Textarea placeholder="Descrição do débito" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <Button type="submit" className="w-full">
               {isProductMode ? "Criar Venda" : "Criar Débito"}
             </Button>
           </form>
