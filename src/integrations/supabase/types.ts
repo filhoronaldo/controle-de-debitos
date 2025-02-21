@@ -66,6 +66,7 @@ export type Database = {
           id: string
           invoice_month: string | null
           products: Json | null
+          sale_id: string | null
           status: Database["public"]["Enums"]["debt_status"]
           transaction_date: string | null
           updated_at: string
@@ -78,6 +79,7 @@ export type Database = {
           id?: string
           invoice_month?: string | null
           products?: Json | null
+          sale_id?: string | null
           status?: Database["public"]["Enums"]["debt_status"]
           transaction_date?: string | null
           updated_at?: string
@@ -90,6 +92,7 @@ export type Database = {
           id?: string
           invoice_month?: string | null
           products?: Json | null
+          sale_id?: string | null
           status?: Database["public"]["Enums"]["debt_status"]
           transaction_date?: string | null
           updated_at?: string
@@ -100,6 +103,13 @@ export type Database = {
             columns: ["client_id"]
             isOneToOne: false
             referencedRelation: "lblz_clients"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lblz_debts_sale_id_fkey"
+            columns: ["sale_id"]
+            isOneToOne: false
+            referencedRelation: "lblz_sales"
             referencedColumns: ["id"]
           },
         ]

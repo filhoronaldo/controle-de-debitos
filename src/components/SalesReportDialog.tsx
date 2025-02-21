@@ -35,42 +35,33 @@ export function SalesReportDialog() {
 
   const deleteSale = useMutation({
     mutationFn: async (saleId: string) => {
-      // Primeiro obtemos os dados da venda
-      const { data: sale } = await supabase
-        .from('lblz_sales')
-        .select('debt_id')
-        .eq('id', saleId)
-        .single();
+      // Verificar se existem pagamentos associados a qualquer débito desta venda
+      const { data: debts } = await supabase
+        .from('lblz_debts')
+        .select('id')
+        .eq('sale_id', saleId);
 
-      if (sale?.debt_id) {
-        // Verificar se existem pagamentos associados aos débitos
+      if (debts && debts.length > 0) {
+        const debtIds = debts.map(d => d.id);
+        
         const { data: payments } = await supabase
           .from('lblz_payments')
           .select('id')
-          .eq('debt_id', sale.debt_id);
+          .in('debt_id', debtIds);
 
         if (payments && payments.length > 0) {
           throw new Error("Não é possível excluir uma venda que possui pagamentos registrados.");
         }
       }
 
-      // Primeiro excluímos a venda
+      // Como temos ON DELETE CASCADE na coluna sale_id de lblz_debts,
+      // ao excluir a venda, todos os débitos relacionados serão excluídos automaticamente
       const { error: saleError } = await supabase
         .from('lblz_sales')
         .delete()
         .eq('id', saleId);
 
       if (saleError) throw saleError;
-
-      // Se havia um débito associado, agora podemos excluí-lo
-      if (sale?.debt_id) {
-        const { error: debtsError } = await supabase
-          .from('lblz_debts')
-          .delete()
-          .eq('id', sale.debt_id);
-
-        if (debtsError) throw debtsError;
-      }
     },
     onSuccess: () => {
       toast.success("Venda excluída com sucesso!");
