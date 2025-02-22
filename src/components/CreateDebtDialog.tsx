@@ -162,6 +162,19 @@ export function CreateDebtDialog({ clientId, clientName, clientPhone }: { client
             const installmentAmount = totalAmount / data.installments;
             const baseMonth = parse(`${data.invoice_month}-01`, 'yyyy-MM-dd', new Date());
             
+            const { data: sale, error: saleError } = await supabase
+              .from('lblz_sales')
+              .insert({
+                client_id: clientId,
+                total_amount: totalAmount,
+                products: formattedProducts,
+                payment_method: paymentMethodLabel
+              })
+              .select()
+              .single();
+
+            if (saleError) throw saleError;
+
             const installmentDebts = Array.from({ length: data.installments }, (_, index) => {
               const installmentMonth = addMonths(baseMonth, index);
               const originalAmountText = `(Origem - ${formatCurrency(totalAmount)})`;
@@ -176,7 +189,8 @@ export function CreateDebtDialog({ clientId, clientName, clientPhone }: { client
                 transaction_date: data.transaction_date,
                 invoice_month: format(installmentMonth, 'yyyy-MM-01'),
                 products: formattedProducts as Json,
-                status: 'aberta' as const
+                status: 'aberta' as const,
+                sale_id: sale.id
               };
             });
 
@@ -189,17 +203,12 @@ export function CreateDebtDialog({ clientId, clientName, clientPhone }: { client
 
             if (debtError) throw debtError;
 
-            const { error: saleError } = await supabase
+            const { error: updateSaleError } = await supabase
               .from('lblz_sales')
-              .insert({
-                client_id: clientId,
-                total_amount: totalAmount,
-                products: formattedProducts,
-                payment_method: paymentMethodLabel,
-                debt_id: insertedDebts[0].id
-              });
+              .update({ debt_id: insertedDebts[0].id })
+              .eq('id', sale.id);
 
-            if (saleError) throw saleError;
+            if (updateSaleError) throw updateSaleError;
 
             toast({
               title: "Venda parcelada criada com sucesso!",
@@ -248,6 +257,19 @@ Agradecemos a preferência! 🙏`;
               console.error('Error sending WhatsApp message:', error);
             }
           } else {
+            const { data: sale, error: saleError } = await supabase
+              .from('lblz_sales')
+              .insert({
+                client_id: clientId,
+                total_amount: totalAmount,
+                products: formattedProducts,
+                payment_method: paymentMethodLabel
+              })
+              .select()
+              .single();
+
+            if (saleError) throw saleError;
+
             const debtData = {
               client_id: clientId,
               amount: totalAmount,
@@ -255,7 +277,8 @@ Agradecemos a preferência! 🙏`;
               transaction_date: data.transaction_date,
               invoice_month: `${data.invoice_month}-01`,
               products: formattedProducts as Json,
-              status: 'aberta' as const
+              status: 'aberta' as const,
+              sale_id: sale.id
             };
 
             const { data: insertedDebt, error: debtError } = await supabase
@@ -266,17 +289,12 @@ Agradecemos a preferência! 🙏`;
 
             if (debtError) throw debtError;
 
-            const { error: saleError } = await supabase
+            const { error: updateSaleError } = await supabase
               .from('lblz_sales')
-              .insert({
-                client_id: clientId,
-                total_amount: totalAmount,
-                products: formattedProducts,
-                payment_method: paymentMethodLabel,
-                debt_id: insertedDebt.id
-              });
+              .update({ debt_id: insertedDebt.id })
+              .eq('id', sale.id);
 
-            if (saleError) throw saleError;
+            if (updateSaleError) throw updateSaleError;
 
             toast({
               title: "Venda criada com sucesso!",
