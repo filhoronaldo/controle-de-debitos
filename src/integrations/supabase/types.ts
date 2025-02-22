@@ -64,6 +64,7 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          invoice_id: string | null
           invoice_month: string | null
           products: Json | null
           sale_id: string | null
@@ -77,6 +78,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          invoice_id?: string | null
           invoice_month?: string | null
           products?: Json | null
           sale_id?: string | null
@@ -90,6 +92,7 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          invoice_id?: string | null
           invoice_month?: string | null
           products?: Json | null
           sale_id?: string | null
@@ -106,10 +109,61 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "lblz_debts_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "lblz_invoices"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "lblz_debts_sale_id_fkey"
             columns: ["sale_id"]
             isOneToOne: false
             referencedRelation: "lblz_sales"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lblz_invoices: {
+        Row: {
+          client_id: string
+          closed_at: string
+          created_at: string
+          id: string
+          month: string
+          paid_amount: number
+          status: string
+          total_amount: number
+          updated_at: string
+        }
+        Insert: {
+          client_id: string
+          closed_at?: string
+          created_at?: string
+          id?: string
+          month: string
+          paid_amount?: number
+          status?: string
+          total_amount: number
+          updated_at?: string
+        }
+        Update: {
+          client_id?: string
+          closed_at?: string
+          created_at?: string
+          id?: string
+          month?: string
+          paid_amount?: number
+          status?: string
+          total_amount?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lblz_invoices_client_id_fkey"
+            columns: ["client_id"]
+            isOneToOne: false
+            referencedRelation: "lblz_clients"
             referencedColumns: ["id"]
           },
         ]

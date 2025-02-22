@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { ChevronLeft, ChevronRight, Plus, Trash2 } from "lucide-react"
+import { ChevronLeft, ChevronRight, Plus, Trash2, Lock } from "lucide-react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 import { format, parseISO, startOfMonth, endOfMonth, addMonths, subMonths, setDate, isBefore } from "date-fns"
@@ -10,6 +10,7 @@ import { useState, useEffect } from "react"
 import { CreatePaymentDialog } from "./CreatePaymentDialog"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog"
 
 interface InvoiceDialogProps {
   clientId: string
@@ -98,6 +99,58 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
     onError: () => {
       toast.error("Erro ao excluir pagamento")
     },
+  })
+
+  const { data: invoiceStatus } = useQuery({
+    queryKey: ["invoice-status", clientId, format(currentMonth, "yyyy-MM")],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("lblz_invoices")
+        .select("*")
+        .eq("client_id", clientId)
+        .eq("month", format(startOfMonth(currentMonth), "yyyy-MM-dd"))
+        .maybeSingle();
+      
+      return data;
+    }
+  });
+
+  const closeInvoice = useMutation({
+    mutationFn: async () => {
+      const { totalAmount, totalPaid } = calculateTotals();
+      const month = format(startOfMonth(currentMonth), "yyyy-MM-dd");
+
+      const { data: invoice, error: invoiceError } = await supabase
+        .from("lblz_invoices")
+        .insert({
+          client_id: clientId,
+          month,
+          total_amount: totalAmount,
+          paid_amount: totalPaid,
+        })
+        .select()
+        .single();
+
+      if (invoiceError) throw invoiceError;
+
+      const { error: debtsError } = await supabase
+        .from("lblz_debts")
+        .update({ invoice_id: invoice.id })
+        .eq("client_id", clientId)
+        .eq("invoice_month", month);
+
+      if (debtsError) throw debtsError;
+
+      return invoice;
+    },
+    onSuccess: () => {
+      toast.success("Fatura fechada com sucesso!");
+      queryClient.invalidateQueries({ queryKey: ["invoice-status", clientId] });
+      queryClient.invalidateQueries({ queryKey: ["invoice-debts", clientId] });
+    },
+    onError: () => {
+      toast.error("Erro ao fechar fatura");
+    }
   })
 
   useEffect(() => {
@@ -215,7 +268,16 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
           <div className="mb-4 flex flex-col gap-4">
             <div className="space-y-2 w-full">
               <div className="flex justify-center mb-2">
-                <Badge variant={getInvoiceStatus().variant}>{getInvoiceStatus().label}</Badge>
+                <Badge variant={getInvoiceStatus().variant}>
+                  {invoiceStatus ? (
+                    <div className="flex items-center gap-1">
+                      <Lock className="h-3 w-3" />
+                      Fatura Fechada
+                    </div>
+                  ) : (
+                    getInvoiceStatus().label
+                  )}
+                </Badge>
               </div>
               <div className="text-sm text-muted-foreground grid grid-cols-1 gap-2 text-center">
                 <div>
@@ -235,19 +297,47 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
                 </div>
               </div>
             </div>
-            {firstPendingDebtId && (
-              <CreatePaymentDialog
-                debtId={firstPendingDebtId}
-                amount={calculateTotals().pendingAmount}
-                onPaymentComplete={handlePaymentComplete}
-                trigger={
-                  <Button className="w-full">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Registrar Pagamento
-                  </Button>
-                }
-              />
-            )}
+
+            <div className="flex gap-2">
+              {!invoiceStatus && firstPendingDebtId && (
+                <CreatePaymentDialog
+                  debtId={firstPendingDebtId}
+                  amount={calculateTotals().pendingAmount}
+                  onPaymentComplete={handlePaymentComplete}
+                  trigger={
+                    <Button className="w-full">
+                      <Plus className="h-4 w-4 mr-2" />
+                      Registrar Pagamento
+                    </Button>
+                  }
+                />
+              )}
+
+              {!invoiceStatus && calculateTotals().totalAmount > 0 && (
+                <AlertDialog>
+                  <AlertDialogTrigger asChild>
+                    <Button variant="outline" className="w-full">
+                      <Lock className="h-4 w-4 mr-2" />
+                      Fechar Fatura
+                    </Button>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Fechar Fatura</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Tem certeza que deseja fechar esta fatura? Após fechada, não será possível adicionar novos débitos para este mês.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                      <AlertDialogAction onClick={() => closeInvoice.mutate()}>
+                        Fechar Fatura
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              )}
+            </div>
           </div>
 
           <div className="flex-grow overflow-hidden flex flex-col">

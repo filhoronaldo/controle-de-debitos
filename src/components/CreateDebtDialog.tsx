@@ -451,17 +451,16 @@ Agradecemos a preferência! 🙏`;
           });
         }
       }
-
-      setOpen(false);
-      form.reset();
-      setProducts([{ description: "", value: 0 }]);
-      setIsProductMode(false);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating debt:', error);
+      const errorMessage = error?.message?.includes('Não é possível criar débitos para uma fatura já fechada')
+        ? 'Não é possível criar débitos para uma fatura já fechada.'
+        : 'Ocorreu um erro ao tentar criar o débito. Tente novamente.';
+        
       toast({
         variant: "destructive",
         title: "Erro ao criar débito",
-        description: "Ocorreu um erro ao tentar criar o débito. Tente novamente.",
+        description: errorMessage,
       });
     }
   };
