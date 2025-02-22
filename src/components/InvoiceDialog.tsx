@@ -299,7 +299,7 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
             </div>
 
             <div className="flex gap-2">
-              {!invoiceStatus && firstPendingDebtId && (
+              {firstPendingDebtId && (
                 <CreatePaymentDialog
                   debtId={firstPendingDebtId}
                   amount={calculateTotals().pendingAmount}
