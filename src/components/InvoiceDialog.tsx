@@ -187,6 +187,17 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
   }
 
   const getInvoiceStatus = () => {
+    if (invoiceStatus) {
+      switch (invoiceStatus.status) {
+        case 'fechada_paga':
+          return { label: "Fatura Fechada - Paga", variant: "success" as const }
+        case 'fechada_parcial':
+          return { label: "Fatura Fechada - Pagamento Parcial", variant: "warning" as const }
+        default:
+          return { label: "Fatura Fechada", variant: "outline" as const }
+      }
+    }
+
     const { totalAmount, totalPaid } = calculateTotals()
     const dueDate = getDueDate()
     const isPastDue = dueDate
@@ -269,14 +280,10 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
             <div className="space-y-2 w-full">
               <div className="flex justify-center mb-2">
                 <Badge variant={getInvoiceStatus().variant}>
-                  {invoiceStatus ? (
-                    <div className="flex items-center gap-1">
-                      <Lock className="h-3 w-3" />
-                      Fatura Fechada
-                    </div>
-                  ) : (
-                    getInvoiceStatus().label
-                  )}
+                  <div className="flex items-center gap-1">
+                    {invoiceStatus && <Lock className="h-3 w-3" />}
+                    {getInvoiceStatus().label}
+                  </div>
                 </Badge>
               </div>
               <div className="text-sm text-muted-foreground grid grid-cols-1 gap-2 text-center">

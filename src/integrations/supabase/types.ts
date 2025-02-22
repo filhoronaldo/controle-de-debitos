@@ -132,7 +132,7 @@ export type Database = {
           id: string
           month: string
           paid_amount: number
-          status: string
+          status: Database["public"]["Enums"]["invoice_status"]
           total_amount: number
           updated_at: string
         }
@@ -143,7 +143,7 @@ export type Database = {
           id?: string
           month: string
           paid_amount?: number
-          status?: string
+          status?: Database["public"]["Enums"]["invoice_status"]
           total_amount: number
           updated_at?: string
         }
@@ -154,7 +154,7 @@ export type Database = {
           id?: string
           month?: string
           paid_amount?: number
-          status?: string
+          status?: Database["public"]["Enums"]["invoice_status"]
           total_amount?: number
           updated_at?: string
         }
@@ -278,6 +278,7 @@ export type Database = {
     }
     Enums: {
       debt_status: "aberta" | "paga" | "parcial"
+      invoice_status: "fechada" | "fechada_paga" | "fechada_parcial"
     }
     CompositeTypes: {
       [_ in never]: never
