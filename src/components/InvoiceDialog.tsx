@@ -1,7 +1,7 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Button } from "@/components/ui/button"
-import { ChevronLeft, ChevronRight, Plus, Trash2, Lock } from "lucide-react"
+import { ChevronLeft, ChevronRight, Plus, Trash2, Lock, RotateCw } from "lucide-react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { supabase } from "@/integrations/supabase/client"
 import { format, parseISO, startOfMonth, endOfMonth, addMonths, subMonths, setDate, isBefore } from "date-fns"
@@ -150,6 +150,27 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
     },
     onError: () => {
       toast.error("Erro ao fechar fatura");
+    }
+  })
+
+  const reopenInvoice = useMutation({
+    mutationFn: async () => {
+      if (!invoiceStatus) return;
+      
+      const { error } = await supabase
+        .from("lblz_invoices")
+        .delete()
+        .eq("id", invoiceStatus.id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Fatura reaberta com sucesso")
+      queryClient.invalidateQueries({ queryKey: ["invoice-status", clientId] })
+      queryClient.invalidateQueries({ queryKey: ["invoice-debts", clientId] })
+    },
+    onError: () => {
+      toast.error("Erro ao reabrir fatura")
     }
   })
 
@@ -320,29 +341,54 @@ export function InvoiceDialog({ clientId, clientName, open, onOpenChange }: Invo
                 />
               )}
 
-              {!invoiceStatus && calculateTotals().totalAmount > 0 && (
+              {invoiceStatus ? (
                 <AlertDialog>
                   <AlertDialogTrigger asChild>
                     <Button variant="outline" className="w-full">
-                      <Lock className="h-4 w-4 mr-2" />
-                      Fechar Fatura
+                      <RotateCw className="h-4 w-4 mr-2" />
+                      Reabrir Fatura
                     </Button>
                   </AlertDialogTrigger>
                   <AlertDialogContent>
                     <AlertDialogHeader>
-                      <AlertDialogTitle>Fechar Fatura</AlertDialogTitle>
+                      <AlertDialogTitle>Reabrir Fatura</AlertDialogTitle>
                       <AlertDialogDescription>
-                        Tem certeza que deseja fechar esta fatura? Após fechada, não será possível adicionar novos débitos para este mês.
+                        Tem certeza que deseja reabrir esta fatura? Isso permitirá adicionar novos débitos para este mês.
                       </AlertDialogDescription>
                     </AlertDialogHeader>
                     <AlertDialogFooter>
                       <AlertDialogCancel>Cancelar</AlertDialogCancel>
-                      <AlertDialogAction onClick={() => closeInvoice.mutate()}>
-                        Fechar Fatura
+                      <AlertDialogAction onClick={() => reopenInvoice.mutate()}>
+                        Reabrir Fatura
                       </AlertDialogAction>
                     </AlertDialogFooter>
                   </AlertDialogContent>
                 </AlertDialog>
+              ) : (
+                calculateTotals().totalAmount > 0 && (
+                  <AlertDialog>
+                    <AlertDialogTrigger asChild>
+                      <Button variant="outline" className="w-full">
+                        <Lock className="h-4 w-4 mr-2" />
+                        Fechar Fatura
+                      </Button>
+                    </AlertDialogTrigger>
+                    <AlertDialogContent>
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Fechar Fatura</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          Tem certeza que deseja fechar esta fatura? Após fechada, não será possível adicionar novos débitos para este mês.
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction onClick={() => closeInvoice.mutate()}>
+                          Fechar Fatura
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                )
               )}
             </div>
           </div>
