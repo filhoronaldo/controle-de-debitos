@@ -33,8 +33,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { ProductSearch } from "@/components/ui/product-search";
 
 const productSchema = z.object({
+  description: z.string().optional(),
+  value: z.coerce.number().min(0.01, "O valor deve ser maior que zero"),
+});
+
+const createSchema = z.object({
   description: z.string().optional(),
   value: z.coerce.number().min(0.01, "O valor deve ser maior que zero"),
 });
@@ -52,8 +58,10 @@ const formSchema = z.object({
 type CreateClientForm = z.infer<typeof formSchema>;
 
 interface Product {
-  description: string;
-  value: number;
+  id: string;
+  nome: string;
+  preco: string;
+  imagem: string;
 }
 
 const PAYMENT_METHODS = [
@@ -67,7 +75,7 @@ const PAYMENT_METHODS = [
 export function CreateDebtDialog({ clientId, clientName, clientPhone }: { clientId: string, clientName: string, clientPhone: string }) {
   const [open, setOpen] = useState(false);
   const [isProductMode, setIsProductMode] = useState(false);
-  const [products, setProducts] = useState<Product[]>([{ description: "", value: 0 }]);
+  const [products, setProducts] = useState<Product[]>([]);
   const { toast } = useToast();
 
   const today = new Date();
@@ -93,12 +101,12 @@ export function CreateDebtDialog({ clientId, clientName, clientPhone }: { client
       form.setValue('amount', 0);
       calculateTotalFromProducts();
     } else {
-      setProducts([{ description: "", value: 0 }]);
+      setProducts([{ id: '', nome: '', preco: '0', imagem: '' }]);
     }
   };
 
   const addProduct = () => {
-    setProducts([...products, { description: "", value: 0 }]);
+    setProducts([...products, { id: '', nome: '', preco: '0', imagem: '' }]);
   };
 
   const removeProduct = (index: number) => {
@@ -447,7 +455,7 @@ Agradecemos a preferência! 🙏`;
 
           toast({
             title: "Débito criado com sucesso!",
-            description: `Débito de ${formatCurrency(data.amount)} adicionado para ${clientName}`,
+            description: `D��bito de ${formatCurrency(data.amount)} adicionado para ${clientName}`,
           });
         }
       }
@@ -501,19 +509,29 @@ Agradecemos a preferência! 🙏`;
                   {products.map((product, index) => (
                     <div key={index} className="flex gap-2 items-start">
                       <div className="flex-1">
-                        <Input
-                          placeholder={`Produto ${index + 1}`}
-                          value={product.description}
-                          onChange={(e) => updateProduct(index, 'description', e.target.value)}
-                          className="mb-2"
+                        <ProductSearch 
+                          onSelect={(selectedProduct) => {
+                            const newProducts = [...products];
+                            newProducts[index] = selectedProduct;
+                            setProducts(newProducts);
+                            updateProduct(index, 'description', selectedProduct.nome);
+                            updateProduct(index, 'value', Number(selectedProduct.preco));
+                          }} 
                         />
                         <Input
                           placeholder="R$ 0,00"
-                          value={formatCurrency(product.value)}
+                          value={formatCurrency(Number(product.preco))}
                           onChange={(e) => {
                             const value = e.target.value.replace(/\D/g, '');
+                            const newProducts = [...products];
+                            newProducts[index] = {
+                              ...product,
+                              preco: value ? (parseInt(value) / 100).toString() : '0'
+                            };
+                            setProducts(newProducts);
                             updateProduct(index, 'value', value ? parseInt(value) / 100 : 0);
                           }}
+                          className="mt-2"
                         />
                       </div>
                       <div className="flex flex-col gap-2">
@@ -521,7 +539,10 @@ Agradecemos a preferência! 🙏`;
                           <Button
                             type="button"
                             size="icon"
-                            onClick={addProduct}
+                            onClick={() => {
+                              setProducts([...products, { id: '', nome: '', preco: '0', imagem: '' }]);
+                              addProduct();
+                            }}
                           >
                             <Plus className="h-4 w-4" />
                           </Button>
@@ -531,7 +552,12 @@ Agradecemos a preferência! 🙏`;
                             type="button"
                             variant="destructive"
                             size="icon"
-                            onClick={() => removeProduct(index)}
+                            onClick={() => {
+                              const newProducts = [...products];
+                              newProducts.splice(index, 1);
+                              setProducts(newProducts);
+                              removeProduct(index);
+                            }}
                           >
                             <Minus className="h-4 w-4" />
                           </Button>
