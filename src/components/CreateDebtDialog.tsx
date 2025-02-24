@@ -35,6 +35,18 @@ import {
 } from "@/components/ui/select";
 import { ProductSearch } from "@/components/ui/product-search";
 
+interface ProductBase {
+  id: string;
+  nome: string;
+  preco: string;
+  imagem: string;
+}
+
+interface ProductWithFormFields extends ProductBase {
+  description?: string;
+  value: number;
+}
+
 const productSchema = z.object({
   description: z.string().optional(),
   value: z.coerce.number().min(0.01, "O valor deve ser maior que zero"),
@@ -57,13 +69,6 @@ const formSchema = z.object({
 
 type CreateClientForm = z.infer<typeof formSchema>;
 
-interface Product {
-  id: string;
-  nome: string;
-  preco: string;
-  imagem: string;
-}
-
 const PAYMENT_METHODS = [
   { id: "credito_loja", label: "Crédito Próprio Loja" },
   { id: "dinheiro", label: "Dinheiro" },
@@ -75,12 +80,12 @@ const PAYMENT_METHODS = [
 export function CreateDebtDialog({ clientId, clientName, clientPhone }: { clientId: string, clientName: string, clientPhone: string }) {
   const [open, setOpen] = useState(false);
   const [isProductMode, setIsProductMode] = useState(false);
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<ProductWithFormFields[]>([]);
   const { toast } = useToast();
 
   const today = new Date();
-  const localDate = today.toLocaleDateString('en-CA'); // Formato YYYY-MM-DD
-  const localMonth = today.toISOString().split('T')[0].substring(0, 7); // Formato YYYY-MM
+  const localDate = today.toLocaleDateString('en-CA');
+  const localMonth = today.toISOString().split('T')[0].substring(0, 7);
 
   const form = useForm<CreateClientForm>({
     resolver: zodResolver(formSchema),
@@ -101,12 +106,12 @@ export function CreateDebtDialog({ clientId, clientName, clientPhone }: { client
       form.setValue('amount', 0);
       calculateTotalFromProducts();
     } else {
-      setProducts([{ id: '', nome: '', preco: '0', imagem: '' }]);
+      setProducts([{ id: '', nome: '', preco: '0', imagem: '', value: 0 }]);
     }
   };
 
   const addProduct = () => {
-    setProducts([...products, { id: '', nome: '', preco: '0', imagem: '' }]);
+    setProducts([...products, { id: '', nome: '', preco: '0', imagem: '', value: 0 }]);
   };
 
   const removeProduct = (index: number) => {
@@ -118,15 +123,14 @@ export function CreateDebtDialog({ clientId, clientName, clientPhone }: { client
     }
   };
 
-  const updateProduct = (index: number, field: keyof Product, value: string | number) => {
+  const updateProduct = (index: number, field: keyof ProductWithFormFields, value: string | number) => {
     const newProducts = [...products];
     if (field === 'value') {
-      const numericValue = typeof value === 'string' 
+      newProducts[index][field] = typeof value === 'string' 
         ? Number(value.replace(/[^\d,]/g, '').replace(',', '.')) / 100
-        : value;
-      newProducts[index][field] = numericValue;
+        : value as number;
     } else {
-      newProducts[index][field] = value as string;
+      newProducts[index][field as keyof Omit<ProductWithFormFields, 'value'>] = value as string;
     }
     setProducts(newProducts);
     calculateTotalFromProducts(newProducts);
@@ -512,23 +516,20 @@ Agradecemos a preferência! 🙏`;
                         <ProductSearch 
                           onSelect={(selectedProduct) => {
                             const newProducts = [...products];
-                            newProducts[index] = selectedProduct;
+                            newProducts[index] = {
+                              ...selectedProduct,
+                              value: Number(selectedProduct.preco),
+                              description: selectedProduct.nome
+                            };
                             setProducts(newProducts);
-                            updateProduct(index, 'description', selectedProduct.nome);
-                            updateProduct(index, 'value', Number(selectedProduct.preco));
+                            calculateTotalFromProducts(newProducts);
                           }} 
                         />
                         <Input
                           placeholder="R$ 0,00"
-                          value={formatCurrency(Number(product.preco))}
+                          value={formatCurrency(product.value)}
                           onChange={(e) => {
                             const value = e.target.value.replace(/\D/g, '');
-                            const newProducts = [...products];
-                            newProducts[index] = {
-                              ...product,
-                              preco: value ? (parseInt(value) / 100).toString() : '0'
-                            };
-                            setProducts(newProducts);
                             updateProduct(index, 'value', value ? parseInt(value) / 100 : 0);
                           }}
                           className="mt-2"
@@ -539,10 +540,7 @@ Agradecemos a preferência! 🙏`;
                           <Button
                             type="button"
                             size="icon"
-                            onClick={() => {
-                              setProducts([...products, { id: '', nome: '', preco: '0', imagem: '' }]);
-                              addProduct();
-                            }}
+                            onClick={addProduct}
                           >
                             <Plus className="h-4 w-4" />
                           </Button>
@@ -552,12 +550,7 @@ Agradecemos a preferência! 🙏`;
                             type="button"
                             variant="destructive"
                             size="icon"
-                            onClick={() => {
-                              const newProducts = [...products];
-                              newProducts.splice(index, 1);
-                              setProducts(newProducts);
-                              removeProduct(index);
-                            }}
+                            onClick={() => removeProduct(index)}
                           >
                             <Minus className="h-4 w-4" />
                           </Button>
