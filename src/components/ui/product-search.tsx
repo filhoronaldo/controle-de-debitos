@@ -7,6 +7,7 @@ import {
   CommandGroup,
   CommandInput,
   CommandItem,
+  CommandList,
 } from "@/components/ui/command";
 import {
   Popover,
@@ -33,7 +34,7 @@ export function ProductSearch({ onSelect }: ProductSearchProps) {
   const [value, setValue] = useState("");
   const [search, setSearch] = useState("");
 
-  const { data: products, isLoading } = useQuery({
+  const { data: products = [], isLoading } = useQuery({
     queryKey: ['products', search],
     enabled: search.length > 2,
     queryFn: async () => {
@@ -51,7 +52,7 @@ export function ProductSearch({ onSelect }: ProductSearchProps) {
       const json = await response.json();
       return json.data as Product[];
     },
-    initialData: [] // Fornece um array vazio como valor inicial
+    initialData: []
   });
 
   return (
@@ -64,49 +65,51 @@ export function ProductSearch({ onSelect }: ProductSearchProps) {
           className="w-full justify-between"
         >
           {value
-            ? products?.find((product) => product.nome === value)?.nome
+            ? products.find((product) => product.nome === value)?.nome
             : "Buscar produto..."}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-full p-0">
-        <Command>
+      <PopoverContent className="w-full p-0" align="start">
+        <Command shouldFilter={false}>
           <CommandInput 
             placeholder="Digite o nome do produto..." 
             value={search}
             onValueChange={setSearch}
           />
-          <CommandEmpty>Nenhum produto encontrado.</CommandEmpty>
-          <CommandGroup className="max-h-[300px] overflow-y-auto">
-            {isLoading && (
-              <div className="flex items-center justify-center p-4">
-                <Loader2 className="h-4 w-4 animate-spin" />
-              </div>
-            )}
-            {products?.map((product) => (
-              <CommandItem
-                key={product.id}
-                value={product.nome}
-                onSelect={(currentValue) => {
-                  setValue(currentValue === value ? "" : currentValue);
-                  onSelect(product);
-                  setOpen(false);
-                }}
-              >
-                <Check
-                  className={cn(
-                    "mr-2 h-4 w-4",
-                    value === product.nome ? "opacity-100" : "opacity-0"
-                  )}
-                />
-                <div className="flex flex-col">
-                  <span>{product.nome}</span>
-                  <span className="text-sm text-muted-foreground">
-                    {formatCurrency(Number(product.preco))}
-                  </span>
+          <CommandList>
+            <CommandEmpty>Nenhum produto encontrado.</CommandEmpty>
+            <CommandGroup>
+              {isLoading && (
+                <div className="flex items-center justify-center p-4">
+                  <Loader2 className="h-4 w-4 animate-spin" />
                 </div>
-              </CommandItem>
-            ))}
-          </CommandGroup>
+              )}
+              {products.map((product) => (
+                <CommandItem
+                  key={product.id}
+                  value={product.nome}
+                  onSelect={(currentValue) => {
+                    setValue(currentValue === value ? "" : currentValue);
+                    onSelect(product);
+                    setOpen(false);
+                  }}
+                >
+                  <Check
+                    className={cn(
+                      "mr-2 h-4 w-4",
+                      value === product.nome ? "opacity-100" : "opacity-0"
+                    )}
+                  />
+                  <div className="flex flex-col">
+                    <span>{product.nome}</span>
+                    <span className="text-sm text-muted-foreground">
+                      {formatCurrency(Number(product.preco))}
+                    </span>
+                  </div>
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
         </Command>
       </PopoverContent>
     </Popover>
