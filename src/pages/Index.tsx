@@ -2,11 +2,11 @@
 import { DashboardCard } from "@/components/DashboardCard";
 import { ClientList } from "@/components/ClientList";
 import { Button } from "@/components/ui/button";
-import { CreditCard, DollarSign, Receipt, User, AlertTriangle } from "lucide-react";
+import { CreditCard, DollarSign, Receipt, User } from "lucide-react";
 import { CreateClientDialog } from "@/components/CreateClientDialog";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { startOfDay, endOfDay, addDays, format } from "date-fns";
+import { startOfDay, endOfDay } from "date-fns";
 import { formatCurrency } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { SalesReportDialog } from "@/components/SalesReportDialog";
@@ -64,51 +64,6 @@ const Index = () => {
     }
   });
 
-  // Nova query para buscar clientes com faturas vencendo em 7 dias
-  const { data: upcomingInvoices } = useQuery({
-    queryKey: ['upcoming-invoices'],
-    queryFn: async () => {
-      const today = new Date();
-      const nextWeek = addDays(today, 7);
-      const currentMonth = format(today, 'yyyy-MM');
-      
-      const { data: clients, error } = await supabase
-        .from('lblz_clients')
-        .select(`
-          id,
-          name,
-          invoice_day,
-          last_invoice_sent_month
-        `);
-
-      if (error) throw error;
-
-      // Filtra os clientes que têm vencimento nos próximos 7 dias
-      const upcomingDue = clients.filter(client => {
-        const dueDay = client.invoice_day || 1;
-        const dueDate = new Date(today.getFullYear(), today.getMonth(), dueDay);
-        
-        // Se já passou do dia do vencimento este mês, considera o próximo mês
-        if (today.getDate() > dueDay) {
-          dueDate.setMonth(dueDate.getMonth() + 1);
-        }
-
-        // Verifica se o vencimento é nos próximos 7 dias
-        return dueDate <= nextWeek && dueDate >= today;
-      });
-
-      // Conta quantos ainda não receberam a fatura
-      const notSent = upcomingDue.filter(client => 
-        client.last_invoice_sent_month !== currentMonth
-      ).length;
-
-      return {
-        total: upcomingDue.length,
-        notSent
-      };
-    }
-  });
-
   return (
     <div className="container mx-auto px-2 py-4 space-y-4 animate-fadeIn max-w-full md:max-w-7xl">
       <div className="flex flex-col md:flex-row justify-between items-center gap-3">
@@ -136,9 +91,9 @@ const Index = () => {
           icon={<CreditCard className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />}
         />
         <DashboardCard
-          title="Faturas em 7 dias"
-          value={`${upcomingInvoices?.total || 0} (${upcomingInvoices?.notSent || 0} não enviadas)`}
-          icon={<AlertTriangle className={`h-3 w-3 sm:h-4 sm:w-4 ${upcomingInvoices?.notSent ? 'text-destructive' : 'text-muted-foreground'}`} />}
+          title="Faturas em Aberto"
+          value="5"
+          icon={<Receipt className="h-3 w-3 sm:h-4 sm:w-4 text-muted-foreground" />}
         />
       </div>
 

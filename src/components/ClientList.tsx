@@ -1,7 +1,8 @@
+
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useState } from "react";
-import { format, parseISO, isBefore, startOfMonth, endOfMonth, isAfter, setHours, setMinutes, setSeconds, setMilliseconds, addMonths, differenceInDays, addDays } from "date-fns";
+import { format, parseISO, isBefore, startOfMonth, endOfMonth, isAfter, setHours, setMinutes, setSeconds, setMilliseconds, addMonths, differenceInDays } from "date-fns";
 import { toast } from "sonner";
 import { InvoiceDialog } from "./InvoiceDialog";
 import { ClientDetailsDialog } from "./ClientDetailsDialog";
@@ -19,7 +20,6 @@ export function ClientList() {
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
   const [nameFilter, setNameFilter] = useState("");
   const [statusFilter, setStatusFilter] = useState("todos");
-  const [dueSoonFilter, setDueSoonFilter] = useState(false);
   const queryClient = useQueryClient();
   
   const { data: clients, isLoading } = useQuery({
@@ -282,23 +282,7 @@ export function ClientList() {
   const filteredClients = clients?.filter((client) => {
     const nameMatch = client.name.toLowerCase().includes(nameFilter.toLowerCase());
     const statusMatch = statusFilter === "todos" || client.status === statusFilter;
-    
-    let dueSoonMatch = true;
-    if (dueSoonFilter) {
-      const today = new Date();
-      const nextWeek = addDays(today, 7);
-      const dueDay = client.invoice_day || 1;
-      const dueDate = new Date(today.getFullYear(), today.getMonth(), dueDay);
-      
-      // Se já passou do dia do vencimento este mês, considera o próximo mês
-      if (today.getDate() > dueDay) {
-        dueDate.setMonth(dueDate.getMonth() + 1);
-      }
-
-      dueSoonMatch = dueDate <= nextWeek && dueDate >= today;
-    }
-
-    return nameMatch && statusMatch && dueSoonMatch;
+    return nameMatch && statusMatch;
   });
 
   if (isLoading) {
@@ -310,10 +294,8 @@ export function ClientList() {
       <ClientFilters
         nameFilter={nameFilter}
         statusFilter={statusFilter}
-        dueSoonFilter={dueSoonFilter}
         onNameFilterChange={setNameFilter}
         onStatusFilterChange={setStatusFilter}
-        onDueSoonFilterChange={setDueSoonFilter}
       />
 
       <div className="space-y-2">

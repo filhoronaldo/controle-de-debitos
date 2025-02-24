@@ -126,43 +126,34 @@ export type Database = {
       }
       lblz_invoices: {
         Row: {
-          br_code: string | null
           client_id: string
           closed_at: string
           created_at: string
           id: string
           month: string
           paid_amount: number
-          payment_link_url: string | null
-          qr_code_image: string | null
           status: Database["public"]["Enums"]["invoice_status"]
           total_amount: number
           updated_at: string
         }
         Insert: {
-          br_code?: string | null
           client_id: string
           closed_at?: string
           created_at?: string
           id?: string
           month: string
           paid_amount?: number
-          payment_link_url?: string | null
-          qr_code_image?: string | null
           status?: Database["public"]["Enums"]["invoice_status"]
           total_amount: number
           updated_at?: string
         }
         Update: {
-          br_code?: string | null
           client_id?: string
           closed_at?: string
           created_at?: string
           id?: string
           month?: string
           paid_amount?: number
-          payment_link_url?: string | null
-          qr_code_image?: string | null
           status?: Database["public"]["Enums"]["invoice_status"]
           total_amount?: number
           updated_at?: string
