@@ -33,26 +33,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ProductSearch } from "@/components/ui/product-search";
-
-interface ProductBase {
-  id: string;
-  nome: string;
-  preco: string;
-  imagem: string;
-}
-
-interface ProductWithFormFields extends ProductBase {
-  description?: string;
-  value: number;
-}
 
 const productSchema = z.object({
-  description: z.string().optional(),
-  value: z.coerce.number().min(0.01, "O valor deve ser maior que zero"),
-});
-
-const createSchema = z.object({
   description: z.string().optional(),
   value: z.coerce.number().min(0.01, "O valor deve ser maior que zero"),
 });
@@ -69,6 +51,11 @@ const formSchema = z.object({
 
 type CreateClientForm = z.infer<typeof formSchema>;
 
+interface Product {
+  description: string;
+  value: number;
+}
+
 const PAYMENT_METHODS = [
   { id: "credito_loja", label: "Crédito Próprio Loja" },
   { id: "dinheiro", label: "Dinheiro" },
@@ -80,14 +67,12 @@ const PAYMENT_METHODS = [
 export function CreateDebtDialog({ clientId, clientName, clientPhone }: { clientId: string, clientName: string, clientPhone: string }) {
   const [open, setOpen] = useState(false);
   const [isProductMode, setIsProductMode] = useState(false);
-  const [products, setProducts] = useState<ProductWithFormFields[]>([
-    { id: '', nome: '', preco: '0', imagem: '', value: 0 }
-  ]);
+  const [products, setProducts] = useState<Product[]>([{ description: "", value: 0 }]);
   const { toast } = useToast();
 
   const today = new Date();
-  const localDate = today.toLocaleDateString('en-CA');
-  const localMonth = today.toISOString().split('T')[0].substring(0, 7);
+  const localDate = today.toLocaleDateString('en-CA'); // Formato YYYY-MM-DD
+  const localMonth = today.toISOString().split('T')[0].substring(0, 7); // Formato YYYY-MM
 
   const form = useForm<CreateClientForm>({
     resolver: zodResolver(formSchema),
@@ -108,12 +93,12 @@ export function CreateDebtDialog({ clientId, clientName, clientPhone }: { client
       form.setValue('amount', 0);
       calculateTotalFromProducts();
     } else {
-      setProducts([{ id: '', nome: '', preco: '0', imagem: '', value: 0 }]);
+      setProducts([{ description: "", value: 0 }]);
     }
   };
 
   const addProduct = () => {
-    setProducts([...products, { id: '', nome: '', preco: '0', imagem: '', value: 0 }]);
+    setProducts([...products, { description: "", value: 0 }]);
   };
 
   const removeProduct = (index: number) => {
@@ -125,14 +110,15 @@ export function CreateDebtDialog({ clientId, clientName, clientPhone }: { client
     }
   };
 
-  const updateProduct = (index: number, field: keyof ProductWithFormFields, value: string | number) => {
+  const updateProduct = (index: number, field: keyof Product, value: string | number) => {
     const newProducts = [...products];
     if (field === 'value') {
-      newProducts[index][field] = typeof value === 'string' 
+      const numericValue = typeof value === 'string' 
         ? Number(value.replace(/[^\d,]/g, '').replace(',', '.')) / 100
-        : value as number;
+        : value;
+      newProducts[index][field] = numericValue;
     } else {
-      newProducts[index][field as keyof Omit<ProductWithFormFields, 'value'>] = value as string;
+      newProducts[index][field] = value as string;
     }
     setProducts(newProducts);
     calculateTotalFromProducts(newProducts);
@@ -461,7 +447,7 @@ Agradecemos a preferência! 🙏`;
 
           toast({
             title: "Débito criado com sucesso!",
-            description: `D��bito de ${formatCurrency(data.amount)} adicionado para ${clientName}`,
+            description: `Débito de ${formatCurrency(data.amount)} adicionado para ${clientName}`,
           });
         }
       }
@@ -515,17 +501,11 @@ Agradecemos a preferência! 🙏`;
                   {products.map((product, index) => (
                     <div key={index} className="flex gap-2 items-start">
                       <div className="flex-1">
-                        <ProductSearch 
-                          onSelect={(selectedProduct) => {
-                            const newProducts = [...products];
-                            newProducts[index] = {
-                              ...selectedProduct,
-                              value: Number(selectedProduct.preco),
-                              description: selectedProduct.nome
-                            };
-                            setProducts(newProducts);
-                            calculateTotalFromProducts(newProducts);
-                          }} 
+                        <Input
+                          placeholder={`Produto ${index + 1}`}
+                          value={product.description}
+                          onChange={(e) => updateProduct(index, 'description', e.target.value)}
+                          className="mb-2"
                         />
                         <Input
                           placeholder="R$ 0,00"
@@ -534,7 +514,6 @@ Agradecemos a preferência! 🙏`;
                             const value = e.target.value.replace(/\D/g, '');
                             updateProduct(index, 'value', value ? parseInt(value) / 100 : 0);
                           }}
-                          className="mt-2"
                         />
                       </div>
                       <div className="flex flex-col gap-2">
@@ -565,26 +544,73 @@ Agradecemos a preferência! 🙏`;
                   </div>
                 </div>
               ) : (
-                <FormField
-                  control={form.control}
-                  name="amount"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormControl>
-                        <Input
-                          placeholder="R$ 0,00"
-                          value={formatCurrency(field.value)}
-                          onChange={(e) => {
-                            const value = e.target.value.replace(/\D/g, '');
-                            field.onChange(value ? parseInt(value) / 100 : 0);
-                          }}
-                          className="text-lg md:text-base"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
+                <>
+                  <FormField
+                    control={form.control}
+                    name="amount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormControl>
+                          <Input
+                            placeholder="R$ 0,00"
+                            value={formatCurrency(field.value)}
+                            onChange={(e) => {
+                              const value = e.target.value.replace(/\D/g, '');
+                              field.onChange(value ? parseInt(value) / 100 : 0);
+                            }}
+                            className="text-lg md:text-base"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="useInstallments"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                          <FormLabel className="text-base">Parcelar</FormLabel>
+                        </div>
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  {form.watch('useInstallments') && (
+                    <FormField
+                      control={form.control}
+                      name="installments"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-base">Número de Parcelas</FormLabel>
+                          <FormControl>
+                            <Input
+                              type="number"
+                              min="1"
+                              max="48"
+                              className="text-lg md:text-base"
+                              {...field}
+                            />
+                          </FormControl>
+                          {form.watch('amount') > 0 && field.value > 0 && (
+                            <p className="text-sm text-muted-foreground mt-2">
+                              {field.value}x de {formatCurrency(form.watch('amount') / field.value)}
+                            </p>
+                          )}
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
                   )}
-                />
+                </>
               )}
 
               {isProductMode && (
