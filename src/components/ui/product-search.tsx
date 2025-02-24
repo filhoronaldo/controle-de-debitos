@@ -50,7 +50,8 @@ export function ProductSearch({ onSelect }: ProductSearchProps) {
 
       const json = await response.json();
       return json.data as Product[];
-    }
+    },
+    initialData: [] // Fornece um array vazio como valor inicial
   });
 
   return (
