@@ -80,7 +80,9 @@ const PAYMENT_METHODS = [
 export function CreateDebtDialog({ clientId, clientName, clientPhone }: { clientId: string, clientName: string, clientPhone: string }) {
   const [open, setOpen] = useState(false);
   const [isProductMode, setIsProductMode] = useState(false);
-  const [products, setProducts] = useState<ProductWithFormFields[]>([]);
+  const [products, setProducts] = useState<ProductWithFormFields[]>([
+    { id: '', nome: '', preco: '0', imagem: '', value: 0 }
+  ]);
   const { toast } = useToast();
 
   const today = new Date();
@@ -563,73 +565,26 @@ Agradecemos a preferência! 🙏`;
                   </div>
                 </div>
               ) : (
-                <>
-                  <FormField
-                    control={form.control}
-                    name="amount"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormControl>
-                          <Input
-                            placeholder="R$ 0,00"
-                            value={formatCurrency(field.value)}
-                            onChange={(e) => {
-                              const value = e.target.value.replace(/\D/g, '');
-                              field.onChange(value ? parseInt(value) / 100 : 0);
-                            }}
-                            className="text-lg md:text-base"
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="useInstallments"
-                    render={({ field }) => (
-                      <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                        <div className="space-y-0.5">
-                          <FormLabel className="text-base">Parcelar</FormLabel>
-                        </div>
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                      </FormItem>
-                    )}
-                  />
-
-                  {form.watch('useInstallments') && (
-                    <FormField
-                      control={form.control}
-                      name="installments"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-base">Número de Parcelas</FormLabel>
-                          <FormControl>
-                            <Input
-                              type="number"
-                              min="1"
-                              max="48"
-                              className="text-lg md:text-base"
-                              {...field}
-                            />
-                          </FormControl>
-                          {form.watch('amount') > 0 && field.value > 0 && (
-                            <p className="text-sm text-muted-foreground mt-2">
-                              {field.value}x de {formatCurrency(form.watch('amount') / field.value)}
-                            </p>
-                          )}
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                <FormField
+                  control={form.control}
+                  name="amount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <Input
+                          placeholder="R$ 0,00"
+                          value={formatCurrency(field.value)}
+                          onChange={(e) => {
+                            const value = e.target.value.replace(/\D/g, '');
+                            field.onChange(value ? parseInt(value) / 100 : 0);
+                          }}
+                          className="text-lg md:text-base"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
                   )}
-                </>
+                />
               )}
 
               {isProductMode && (
