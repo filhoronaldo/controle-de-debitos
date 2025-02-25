@@ -40,6 +40,8 @@ const productFormSchema = z.object({
   image_url: z.string().optional(),
 });
 
+type ProductFormValues = z.infer<typeof productFormSchema>;
+
 interface CreateProductDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -48,7 +50,7 @@ interface CreateProductDialogProps {
 export function CreateProductDialog({ open, onOpenChange }: CreateProductDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const queryClient = useQueryClient();
-  const form = useForm<z.infer<typeof productFormSchema>>({
+  const form = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema),
     defaultValues: {
       name: "",
@@ -64,7 +66,7 @@ export function CreateProductDialog({ open, onOpenChange }: CreateProductDialogP
     },
   });
 
-  async function onSubmit(values: z.infer<typeof productFormSchema>) {
+  async function onSubmit(values: ProductFormValues) {
     try {
       setIsSubmitting(true);
       const { error } = await supabase
