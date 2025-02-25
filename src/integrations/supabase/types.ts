@@ -215,6 +215,54 @@ export type Database = {
           },
         ]
       }
+      lblz_products: {
+        Row: {
+          barcode: string | null
+          category: string | null
+          cost_price: number
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          minimum_stock: number
+          name: string
+          price: number
+          sku: string | null
+          stock_quantity: number
+          updated_at: string
+        }
+        Insert: {
+          barcode?: string | null
+          category?: string | null
+          cost_price?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          minimum_stock?: number
+          name: string
+          price?: number
+          sku?: string | null
+          stock_quantity?: number
+          updated_at?: string
+        }
+        Update: {
+          barcode?: string | null
+          category?: string | null
+          cost_price?: number
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          minimum_stock?: number
+          name?: string
+          price?: number
+          sku?: string | null
+          stock_quantity?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       lblz_sales: {
         Row: {
           client_id: string
@@ -259,6 +307,41 @@ export type Database = {
             columns: ["debt_id"]
             isOneToOne: false
             referencedRelation: "lblz_debts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lblz_stock_movements: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          product_id: string
+          quantity: number
+          type: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          product_id: string
+          quantity: number
+          type: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          product_id?: string
+          quantity?: number
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lblz_stock_movements_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "lblz_products"
             referencedColumns: ["id"]
           },
         ]
