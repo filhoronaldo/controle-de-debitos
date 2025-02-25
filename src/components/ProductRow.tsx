@@ -1,5 +1,6 @@
 
 import { ProductDetailsDialog } from "@/components/ProductDetailsDialog";
+import { EditProductDialog } from "@/components/EditProductDialog";
 import { Button } from "@/components/ui/button";
 import {
   TableCell,
@@ -8,7 +9,7 @@ import {
 import { Product } from "@/types/product";
 import { formatCurrency } from "@/lib/utils";
 import { useState } from "react";
-import { Eye } from "lucide-react";
+import { Eye, Pencil } from "lucide-react";
 
 interface ProductRowProps {
   product: Product;
@@ -16,6 +17,7 @@ interface ProductRowProps {
 
 export function ProductRow({ product }: ProductRowProps) {
   const [showDetails, setShowDetails] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
 
   return (
     <TableRow>
@@ -28,14 +30,26 @@ export function ProductRow({ product }: ProductRowProps) {
       </TableCell>
       <TableCell>{formatCurrency(product.price)}</TableCell>
       <TableCell>
-        <Button variant="ghost" size="icon" onClick={() => setShowDetails(true)}>
-          <Eye className="h-4 w-4" />
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" size="icon" onClick={() => setShowDetails(true)}>
+            <Eye className="h-4 w-4" />
+          </Button>
+          <Button variant="ghost" size="icon" onClick={() => setShowEdit(true)}>
+            <Pencil className="h-4 w-4" />
+          </Button>
+        </div>
         {showDetails && (
           <ProductDetailsDialog
             product={product}
             open={showDetails}
             onOpenChange={setShowDetails}
+          />
+        )}
+        {showEdit && (
+          <EditProductDialog
+            product={product}
+            open={showEdit}
+            onOpenChange={setShowEdit}
           />
         )}
       </TableCell>
