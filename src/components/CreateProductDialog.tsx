@@ -53,8 +53,8 @@ export function CreateProductDialog({ open, onOpenChange }: CreateProductDialogP
     defaultValues: {
       name: "",
       description: "",
-      price: "",
-      cost_price: "",
+      price: "0",
+      cost_price: "0",
       stock_quantity: "0",
       minimum_stock: "0",
       sku: "",
@@ -69,7 +69,18 @@ export function CreateProductDialog({ open, onOpenChange }: CreateProductDialogP
       setIsSubmitting(true);
       const { error } = await supabase
         .from('lblz_products')
-        .insert([values]);
+        .insert({
+          name: values.name,
+          description: values.description,
+          price: values.price,
+          cost_price: values.cost_price,
+          stock_quantity: values.stock_quantity,
+          minimum_stock: values.minimum_stock,
+          sku: values.sku || null,
+          barcode: values.barcode || null,
+          category: values.category || null,
+          image_url: values.image_url || null,
+        });
 
       if (error) throw error;
 
