@@ -2,7 +2,7 @@
 import { DashboardCard } from "@/components/DashboardCard";
 import { ClientList } from "@/components/ClientList";
 import { Button } from "@/components/ui/button";
-import { CreditCard, DollarSign, Receipt, User } from "lucide-react";
+import { CreditCard, DollarSign, Package, Receipt, User } from "lucide-react";
 import { CreateClientDialog } from "@/components/CreateClientDialog";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -10,9 +10,11 @@ import { startOfDay, endOfDay } from "date-fns";
 import { formatCurrency } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { SalesReportDialog } from "@/components/SalesReportDialog";
+import { useNavigate } from "react-router-dom";
 
 const Index = () => {
   const isMobile = useIsMobile();
+  const navigate = useNavigate();
 
   const { data: totalDebt } = useQuery({
     queryKey: ['total-debt'],
@@ -71,6 +73,10 @@ const Index = () => {
         <div className="flex flex-col md:flex-row gap-2 w-full md:w-auto">
           <CreateClientDialog />
           <SalesReportDialog />
+          <Button variant="outline" onClick={() => navigate('/products')}>
+            <Package className="h-4 w-4 mr-2" />
+            Produtos
+          </Button>
         </div>
       </div>
 
