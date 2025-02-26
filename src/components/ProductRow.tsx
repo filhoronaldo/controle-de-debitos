@@ -23,7 +23,16 @@ export function ProductRow({ product }: ProductRowProps) {
 
   return (
     <TableRow>
-      <TableCell>{product.name}</TableCell>
+      <TableCell className="flex items-center gap-2">
+        {product.image_url && (
+          <img 
+            src={product.image_url} 
+            alt={product.name} 
+            className="w-8 h-8 object-cover rounded"
+          />
+        )}
+        <span>{product.name}</span>
+      </TableCell>
       <TableCell>{product.category || '-'}</TableCell>
       <TableCell>
         <span className={product.stock_quantity <= product.minimum_stock ? "text-destructive" : ""}>
