@@ -24,7 +24,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Product } from "@/types/product";
-import { Loader2 } from "lucide-react";
+import { Loader2, Upload, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 const productFormSchema = z.object({
@@ -50,6 +50,8 @@ interface EditProductDialogProps {
 
 export function EditProductDialog({ product, open, onOpenChange }: EditProductDialogProps) {
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(product.image_url || null);
   const queryClient = useQueryClient();
   const form = useForm<ProductFormValues>({
     resolver: zodResolver(productFormSchema),
@@ -67,9 +69,48 @@ export function EditProductDialog({ product, open, onOpenChange }: EditProductDi
     },
   });
 
+  async function handleImageSelect(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('Por favor, selecione uma imagem válida');
+      return;
+    }
+
+    setSelectedImage(file);
+    setPreviewUrl(URL.createObjectURL(file));
+  }
+
+  function handleRemoveImage() {
+    setSelectedImage(null);
+    setPreviewUrl(null);
+    const input = document.getElementById('edit-image-upload') as HTMLInputElement;
+    if (input) input.value = '';
+  }
+
   async function onSubmit(values: ProductFormValues) {
     try {
       setIsSubmitting(true);
+      let imageUrl = previewUrl;
+
+      if (selectedImage) {
+        const fileExt = selectedImage.name.split('.').pop();
+        const filePath = `${crypto.randomUUID()}.${fileExt}`;
+
+        const { error: uploadError } = await supabase.storage
+          .from('product-images')
+          .upload(filePath, selectedImage);
+
+        if (uploadError) throw uploadError;
+
+        const { data: { publicUrl } } = supabase.storage
+          .from('product-images')
+          .getPublicUrl(filePath);
+
+        imageUrl = publicUrl;
+      }
+
       const { error } = await supabase
         .from('lblz_products')
         .update({
@@ -82,7 +123,7 @@ export function EditProductDialog({ product, open, onOpenChange }: EditProductDi
           sku: values.sku || null,
           barcode: values.barcode || null,
           category: values.category || null,
-          image_url: values.image_url || null,
+          image_url: imageUrl || null,
         })
         .eq('id', product.id);
 
@@ -111,6 +152,52 @@ export function EditProductDialog({ product, open, onOpenChange }: EditProductDi
 
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            <div className="space-y-4">
+              <div className="flex flex-col items-center justify-center gap-4 p-4 border-2 border-dashed rounded-lg">
+                {previewUrl ? (
+                  <div className="relative">
+                    <img 
+                      src={previewUrl} 
+                      alt="Preview" 
+                      className="max-h-[200px] rounded-lg object-contain"
+                    />
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="icon"
+                      className="absolute top-2 right-2"
+                      onClick={handleRemoveImage}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="text-center">
+                    <Upload className="mx-auto h-12 w-12 text-muted-foreground" />
+                    <p className="mt-2 text-sm text-muted-foreground">
+                      Clique para fazer upload ou arraste uma imagem
+                    </p>
+                  </div>
+                )}
+                <Input
+                  id="edit-image-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageSelect}
+                  className="hidden"
+                />
+                {!previewUrl && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => document.getElementById('edit-image-upload')?.click()}
+                  >
+                    Selecionar Imagem
+                  </Button>
+                )}
+              </div>
+            </div>
+
             <FormField
               control={form.control}
               name="name"
