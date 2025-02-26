@@ -97,7 +97,7 @@ export function CreateProductDialog({ open, onOpenChange }: CreateProductDialogP
         const fileExt = selectedImage.name.split('.').pop();
         const filePath = `${crypto.randomUUID()}.${fileExt}`;
 
-        const { error: uploadError, data } = await supabase.storage
+        const { error: uploadError } = await supabase.storage
           .from('product-images')
           .upload(filePath, selectedImage);
 
