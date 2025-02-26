@@ -66,7 +66,7 @@ export function ProductFilters({ categories, onFilterChange }: ProductFiltersPro
               <SelectValue placeholder="Categoria" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="">Todas</SelectItem>
+              <SelectItem value="all">Todas</SelectItem>
               {categories.map((category) => (
                 <SelectItem key={category} value={category}>
                   {category}

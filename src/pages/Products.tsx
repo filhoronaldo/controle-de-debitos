@@ -51,9 +51,9 @@ export default function Products() {
           product.barcode?.toLowerCase().includes(filters.search.toLowerCase())
         : true;
 
-      const matchesCategory = filters.category
-        ? product.category === filters.category
-        : true;
+      const matchesCategory = filters.category === 'all' || !filters.category
+        ? true
+        : product.category === filters.category;
 
       const matchesStockStatus = filters.stockStatus === 'all'
         ? true
